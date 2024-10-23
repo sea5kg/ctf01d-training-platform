@@ -1,4 +1,4 @@
-.PHONY: lint install build run-server run-db stop-db reset-db test-db remove-db attach-db codegen
+.PHONY: codegen database-attach database-remove database-reset database-run database-stop fmt install lint server-build server-run test
 
 # Lint the code with golangci-lint
 lint:
