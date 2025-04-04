@@ -1,4 +1,4 @@
-FROM golang:1.23-bookworm as builder
+FROM golang:1.24-bookworm as builder
 
 WORKDIR /ctf01d.ru
 
@@ -15,7 +15,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-X 'ctf01d/internal/handler.vers
 
 FROM alpine:latest as prod
 LABEL "maintainer"="Evgenii Sopov <mrseakg@gmail.com>"
-LABEL "repository"="https://github.com/sea-kg/ctf01d"
+LABEL "repository"="https://github.com/sea5kg/ctf01d-training-platform"
 RUN apk --no-cache add ca-certificates
 
 WORKDIR /ctf01d.ru

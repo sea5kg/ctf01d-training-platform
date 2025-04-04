@@ -9,7 +9,7 @@
 run:
   # https://golangci-lint.run/usage/configuration/
   timeout: 10m
-  go: '1.23'
+  go: '1.24'
 linters:
   # some linters are enabled by default
   # https://golangci-lint.run/usage/linters/
