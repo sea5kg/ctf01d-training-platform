@@ -75,7 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16.4
+        image: postgres:17.4
         env:
           POSTGRES_DB: ctf01d_training_platform_test
           POSTGRES_USER: postgres

@@ -39,13 +39,12 @@ database-run:
 	else \
 		echo "Creating and starting container ctf01d-postgres..."; \
 		docker run --rm -d \
-			-v $(PWD)/docker_tmp/pg_data:/var/lib/postgresql/data/ \
 			--name ctf01d-postgres \
 			-e POSTGRES_DB=ctf01d_training_platform \
 			-e POSTGRES_USER=postgres \
 			-e POSTGRES_PASSWORD=postgres \
 			-e PGPORT=4112 \
-			-p 4112:4112 postgres:16.4; \
+			-p 4112:4112 postgres:17.4; \
 	fi
 
 # Attach to the running PostgreSQL container
@@ -93,4 +92,4 @@ test:
 
 # Generate Go server boilerplate from OpenAPI 3
 codegen:
-	oapi-codegen -generate models,chi -o internal/httpserver/httpserver.gen.go --package httpserver api/openapi.yaml
+	oapi-codegen -generate models,gin -o internal/httpserver/httpserver.gen.go --package httpserver api/openapi.yaml
