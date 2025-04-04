@@ -4,29 +4,31 @@ import (
 	"log/slog"
 	"net/http"
 
-	"ctf01d/internal/helper"
 	"ctf01d/internal/httpserver"
 	"ctf01d/internal/model"
 	"ctf01d/internal/repository"
+	"github.com/gin-gonic/gin"
 )
 
-func (h *Handler) ListUniversities(w http.ResponseWriter, r *http.Request, params httpserver.ListUniversitiesParams) {
-	queryParam := r.URL.Query().Get("term")
-
+func (h *Handler) ListUniversities(c *gin.Context, params httpserver.ListUniversitiesParams) {
 	repo := repository.NewUniversityRepository(h.DB)
-	var universities []*model.University
-	var err error
 
-	if queryParam != "" {
-		universities, err = repo.Search(r.Context(), queryParam)
+	var (
+		universities []*model.University
+		err          error
+	)
+
+	if params.Term != nil && *params.Term != "" {
+		universities, err = repo.Search(c.Request.Context(), *params.Term)
 	} else {
-		universities, err = repo.List(r.Context())
+		universities, err = repo.List(c.Request.Context())
 	}
 
 	if err != nil {
-		slog.Warn(err.Error(), "handler", "ListUniversitiesHandler")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Failed to fetch universities"})
+		slog.Warn(err.Error(), "handler", "ListUniversities")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to fetch universities"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, model.NewUniversitiesFromModels(universities))
+
+	c.JSON(http.StatusOK, model.NewUniversitiesFromModels(universities))
 }

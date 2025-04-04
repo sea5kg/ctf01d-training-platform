@@ -1,56 +1,55 @@
 package handler
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 
-	"ctf01d/internal/helper"
 	"ctf01d/internal/httpserver"
 	"ctf01d/internal/model"
 	"ctf01d/internal/repository"
+	"github.com/gin-gonic/gin"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handler) CreateResult(w http.ResponseWriter, r *http.Request, gameId openapi_types.UUID) {
+func (h *Handler) CreateResult(c *gin.Context, gameId openapi_types.UUID) {
 	var result httpserver.ResultRequest
-	var err error
-	if err := json.NewDecoder(r.Body).Decode(&result); err != nil {
+	if err := c.ShouldBindJSON(&result); err != nil {
 		slog.Warn(err.Error(), "handler", "CreateResultHandler")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
+
 	repo := repository.NewResultRepository(h.DB)
 	newResult := &model.Result{
 		GameId: gameId,
 		TeamId: result.TeamId,
 		Score:  result.Score,
 	}
-	if err = repo.Create(r.Context(), newResult); err != nil {
+
+	if err := repo.Create(c.Request.Context(), newResult); err != nil {
 		slog.Warn(err.Error(), "handler", "CreateResultHandler")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create result"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create result"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, newResult.ToResponse(0))
+	c.JSON(http.StatusOK, newResult.ToResponse(0))
 }
 
-func (h *Handler) GetResult(w http.ResponseWriter, r *http.Request, gameId openapi_types.UUID, resultId openapi_types.UUID) {
+func (h *Handler) GetResult(c *gin.Context, gameId openapi_types.UUID, resultId openapi_types.UUID) {
 	repo := repository.NewResultRepository(h.DB)
-	result, err := repo.GetById(r.Context(), gameId)
+	result, err := repo.GetById(c.Request.Context(), gameId)
 	if err != nil {
 		slog.Warn(err.Error(), "handler", "GetResult")
-		// todo - empty result ?
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Failed to fetch result"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to fetch result"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, result.ToResponse(0))
+	c.JSON(http.StatusOK, result.ToResponse(0))
 }
 
-func (h *Handler) UpdateResult(w http.ResponseWriter, r *http.Request, gameId openapi_types.UUID, resultId openapi_types.UUID) {
+func (h *Handler) UpdateResult(c *gin.Context, gameId openapi_types.UUID, resultId openapi_types.UUID) {
 	var resultRequest httpserver.ResultRequest
-	if err := json.NewDecoder(r.Body).Decode(&resultRequest); err != nil {
+	if err := c.ShouldBindJSON(&resultRequest); err != nil {
 		slog.Warn(err.Error(), "handler", "UpdateResult")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
 
@@ -62,25 +61,24 @@ func (h *Handler) UpdateResult(w http.ResponseWriter, r *http.Request, gameId op
 		Score:  resultRequest.Score,
 	}
 
-	if err := repo.Update(r.Context(), result); err != nil {
+	if err := repo.Update(c.Request.Context(), result); err != nil {
 		slog.Warn(err.Error(), "handler", "UpdateResult")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to update result"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update result"})
 		return
 	}
 
-	helper.RespondWithJSON(w, http.StatusOK, result.ToResponse(0))
+	c.JSON(http.StatusOK, result.ToResponse(0))
 }
 
-// GetScoreboard retrieves the scoreboard for a given game ID
-func (h *Handler) GetScoreboard(w http.ResponseWriter, r *http.Request, gameId openapi_types.UUID) {
+func (h *Handler) GetScoreboard(c *gin.Context, gameId openapi_types.UUID) {
 	repo := repository.NewResultRepository(h.DB)
-	results, err := repo.List(r.Context(), gameId)
+	results, err := repo.List(c.Request.Context(), gameId)
 	if err != nil {
 		slog.Warn(err.Error(), "handler", "GetScoreboard")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to fetch scoreboard"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch scoreboard"})
 		return
 	}
 
 	scoreboard := model.NewScoreboardFromResults(results)
-	helper.RespondWithJSON(w, http.StatusOK, scoreboard)
+	c.JSON(http.StatusOK, scoreboard)
 }

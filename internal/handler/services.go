@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 
@@ -9,98 +8,103 @@ import (
 	"ctf01d/internal/httpserver"
 	"ctf01d/internal/model"
 	"ctf01d/internal/repository"
+	"github.com/gin-gonic/gin"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handler) CreateService(w http.ResponseWriter, r *http.Request) {
-	var service httpserver.ServiceRequest
-	var err error
-	if err := json.NewDecoder(r.Body).Decode(&service); err != nil {
-		slog.Warn(err.Error(), "handler", "CreateServiceHandler")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+func (h *Handler) CreateService(c *gin.Context) {
+	var req httpserver.CreateServiceJSONRequestBody
+	if err := c.ShouldBindJSON(&req); err != nil {
+		slog.Warn(err.Error(), "handler", "CreateService")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
 	repo := repository.NewServiceRepository(h.DB)
 	newService := &model.Service{
-		Name:        service.Name,
-		Author:      service.Author,
-		LogoUrl:     helper.ToNullString(service.LogoUrl),
-		Description: *service.Description,
-		IsPublic:    service.IsPublic,
+		Name:        req.Name,
+		Author:      req.Author,
+		LogoUrl:     helper.ToNullString(req.LogoUrl),
+		Description: "",
+		IsPublic:    req.IsPublic,
 	}
-	if err = repo.Create(r.Context(), newService); err != nil {
-		slog.Warn(err.Error(), "handler", "CreateServiceHandler")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create service"})
+
+	if req.Description != nil {
+		newService.Description = *req.Description
+	}
+
+	if err := repo.Create(c.Request.Context(), newService); err != nil {
+		slog.Warn(err.Error(), "handler", "CreateService")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create service"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, newService.ToResponse())
+	c.JSON(http.StatusOK, newService.ToResponse())
 }
 
-func (h *Handler) DeleteService(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (h *Handler) DeleteService(c *gin.Context, id openapi_types.UUID) {
 	repo := repository.NewServiceRepository(h.DB)
-	if err := repo.Delete(r.Context(), id); err != nil {
-		slog.Warn(err.Error(), "handler", "DeleteServiceHandler")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to delete service"})
+	if err := repo.Delete(c.Request.Context(), id); err != nil {
+		slog.Warn(err.Error(), "handler", "DeleteService")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete service"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"data": "Service deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"data": "Service deleted successfully"})
 }
 
-func (h *Handler) GetServiceById(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (h *Handler) GetServiceById(c *gin.Context, id openapi_types.UUID) {
 	repo := repository.NewServiceRepository(h.DB)
-	service, err := repo.GetById(r.Context(), id)
+	service, err := repo.GetById(c.Request.Context(), id)
 	if err != nil {
-		slog.Warn(err.Error(), "handler", "GetServiceByIdHandler")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to fetch service"})
+		slog.Warn(err.Error(), "handler", "GetServiceById")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch service"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, service.ToResponse())
+	c.JSON(http.StatusOK, service.ToResponse())
 }
 
-func (h *Handler) ListServices(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListServices(c *gin.Context) {
 	repo := repository.NewServiceRepository(h.DB)
-	services, err := repo.List(r.Context())
+	services, err := repo.List(c.Request.Context())
 	if err != nil {
-		slog.Warn(err.Error(), "handler", "ListServicesHandler")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to fetch services"})
+		slog.Warn(err.Error(), "handler", "ListServices")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch services"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, model.NewServiceFromModels(services))
+	c.JSON(http.StatusOK, model.NewServiceFromModels(services))
 }
 
-func (h *Handler) UpdateService(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	var sr httpserver.ServiceRequest
-	if err := json.NewDecoder(r.Body).Decode(&sr); err != nil {
+func (h *Handler) UpdateService(c *gin.Context, id openapi_types.UUID) {
+	var req httpserver.UpdateServiceJSONRequestBody
+	if err := c.ShouldBindJSON(&req); err != nil {
 		slog.Warn(err.Error(), "handler", "UpdateService")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
+
 	repo := repository.NewServiceRepository(h.DB)
-	service := &model.Service{
+	update := &model.Service{
 		Id:          id,
-		Name:        sr.Name,
-		Author:      sr.Author,
-		LogoUrl:     helper.ToNullString(sr.LogoUrl),
-		Description: *sr.Description,
-		IsPublic:    sr.IsPublic,
+		Name:        req.Name,
+		Author:      req.Author,
+		LogoUrl:     helper.ToNullString(req.LogoUrl),
+		Description: "",
+		IsPublic:    req.IsPublic,
 	}
-	err := repo.Update(r.Context(), service)
-	if err != nil {
+	if req.Description != nil {
+		update.Description = *req.Description
+	}
+
+	if err := repo.Update(c.Request.Context(), update); err != nil {
 		slog.Warn(err.Error(), "handler", "UpdateService")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Invalid request payload"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update service"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"data": "Service updated successfully"})
+	c.JSON(http.StatusOK, gin.H{"data": "Service updated successfully"})
 }
 
-// fixme implement
-func (h *Handler) UploadChecker(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusNotImplemented)
+func (h *Handler) UploadChecker(c *gin.Context, id openapi_types.UUID) {
+	c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"})
 }
 
-// fixme implement
-func (h *Handler) UploadService(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusNotImplemented)
+func (h *Handler) UploadService(c *gin.Context, id openapi_types.UUID) {
+	c.JSON(http.StatusNotImplemented, gin.H{"message": "Not implemented"})
 }

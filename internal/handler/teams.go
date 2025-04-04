@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 
@@ -9,142 +8,139 @@ import (
 	"ctf01d/internal/httpserver"
 	"ctf01d/internal/model"
 	"ctf01d/internal/repository"
+	"github.com/gin-gonic/gin"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handler) CreateTeam(w http.ResponseWriter, r *http.Request) {
-	// fixme - создание команды через апрупы - нужен стейт
-	var team httpserver.TeamRequest
-	var err error
-	if err := json.NewDecoder(r.Body).Decode(&team); err != nil {
-		slog.Warn(err.Error(), "handler", "CreateTeamHandler")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+func (h *Handler) CreateTeam(c *gin.Context) {
+	var req httpserver.CreateTeamJSONRequestBody
+	if err := c.ShouldBindJSON(&req); err != nil {
+		slog.Warn(err.Error(), "handler", "CreateTeam")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
 
-	teamRepo := repository.NewTeamRepository(h.DB)
 	newTeam := &model.Team{
-		Name:         team.Name,
-		SocialLinks:  helper.ToNullString(team.SocialLinks),
-		Description:  *team.Description,
-		UniversityId: team.UniversityId,
-		AvatarUrl:    helper.ToNullString(team.AvatarUrl),
+		Name:         req.Name,
+		SocialLinks:  helper.ToNullString(req.SocialLinks),
+		Description:  "",
+		UniversityId: req.UniversityId,
+		AvatarUrl:    helper.ToNullString(req.AvatarUrl),
 	}
-	if err = teamRepo.Create(r.Context(), newTeam); err != nil {
-		slog.Warn(err.Error(), "handler", "CreateTeamHandler")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create team"})
+	if req.Description != nil {
+		newTeam.Description = *req.Description
+	}
+
+	teamRepo := repository.NewTeamRepository(h.DB)
+	if err := teamRepo.Create(c.Request.Context(), newTeam); err != nil {
+		slog.Warn(err.Error(), "handler", "CreateTeam")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create team"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, newTeam.ToResponse())
+	c.JSON(http.StatusOK, newTeam.ToResponse())
 }
 
-func (h *Handler) DeleteTeam(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (h *Handler) DeleteTeam(c *gin.Context, id openapi_types.UUID) {
 	teamRepo := repository.NewTeamRepository(h.DB)
-	if err := teamRepo.Delete(r.Context(), id); err != nil {
-		slog.Warn(err.Error(), "handler", "DeleteTeamHandler")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to delete team"})
+	if err := teamRepo.Delete(c.Request.Context(), id); err != nil {
+		slog.Warn(err.Error(), "handler", "DeleteTeam")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete team"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"data": "Team deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"data": "Team deleted successfully"})
 }
 
-func (h *Handler) GetTeamById(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (h *Handler) GetTeamById(c *gin.Context, id openapi_types.UUID) {
 	teamRepo := repository.NewTeamRepository(h.DB)
-	team, err := teamRepo.GetById(r.Context(), id)
+	team, err := teamRepo.GetById(c.Request.Context(), id)
 	if err != nil {
-		slog.Warn(err.Error(), "handler", "GetTeamByIdHandler")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to fetch team"})
+		slog.Warn(err.Error(), "handler", "GetTeamById")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch team"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, team.ToResponse())
+	c.JSON(http.StatusOK, team.ToResponse())
 }
 
-func (h *Handler) ListTeams(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListTeams(c *gin.Context) {
 	teamRepo := repository.NewTeamRepository(h.DB)
-	teams, err := teamRepo.List(r.Context())
+	teams, err := teamRepo.List(c.Request.Context())
 	if err != nil {
-		slog.Warn(err.Error(), "handler", "ListTeamsHandler")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Failed to fetch teams"})
+		slog.Warn(err.Error(), "handler", "ListTeams")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch teams"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, model.NewTeamsFromModels(teams))
+	c.JSON(http.StatusOK, model.NewTeamsFromModels(teams))
 }
 
-func (h *Handler) UpdateTeam(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	var team httpserver.TeamRequest
-	if err := json.NewDecoder(r.Body).Decode(&team); err != nil {
-		slog.Warn(err.Error(), "handler", "UpdateTeamHandler")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+func (h *Handler) UpdateTeam(c *gin.Context, id openapi_types.UUID) {
+	var req httpserver.UpdateTeamJSONRequestBody
+	if err := c.ShouldBindJSON(&req); err != nil {
+		slog.Warn(err.Error(), "handler", "UpdateTeam")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
-	teamRepo := repository.NewTeamRepository(h.DB)
 	updateTeam := &model.Team{
-		Name:         team.Name,
-		SocialLinks:  helper.ToNullString(team.SocialLinks),
-		Description:  *team.Description,
-		UniversityId: team.UniversityId,
-		AvatarUrl:    helper.ToNullString(team.AvatarUrl),
+		Id:           id,
+		Name:         req.Name,
+		SocialLinks:  helper.ToNullString(req.SocialLinks),
+		Description:  "",
+		UniversityId: req.UniversityId,
+		AvatarUrl:    helper.ToNullString(req.AvatarUrl),
 	}
-	updateTeam.Id = id
-	if err := teamRepo.Update(r.Context(), updateTeam); err != nil {
-		slog.Warn(err.Error(), "handler", "UpdateTeamHandler")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to update team"})
+	if req.Description != nil {
+		updateTeam.Description = *req.Description
+	}
+
+	teamRepo := repository.NewTeamRepository(h.DB)
+	if err := teamRepo.Update(c.Request.Context(), updateTeam); err != nil {
+		slog.Warn(err.Error(), "handler", "UpdateTeam")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update team"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"data": "Team updated successfully"})
+	c.JSON(http.StatusOK, gin.H{"data": "Team updated successfully"})
 }
 
-// Создает запись в таблице запросов на добавление участника в команду
-func (h *Handler) ConnectUserTeam(w http.ResponseWriter, r *http.Request, teamId openapi_types.UUID, userId openapi_types.UUID) {
-	// fixme move Role to openapi request
-	type request struct {
+func (h *Handler) ConnectUserTeam(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID) {
+	var req struct {
 		Role string `json:"role"`
 	}
-
-	var req request
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	teamRepo := repository.NewTeamMemberRequestRepository(h.DB)
-
-	err := teamRepo.ConnectUserTeam(r.Context(), teamId, userId, req.Role)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := teamRepo.ConnectUserTeam(c.Request.Context(), teamId, userId, req.Role); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"data": "User create request to join the team"})
+	c.JSON(http.StatusOK, gin.H{"data": "User create request to join the team"})
 }
 
-// Обновляет запись в таблице запросов и добавляет пользователя в команду
-func (h *Handler) ApproveUserTeam(w http.ResponseWriter, r *http.Request, teamId openapi_types.UUID, userId openapi_types.UUID) {
+func (h *Handler) ApproveUserTeam(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID) {
 	teamRepo := repository.NewTeamMemberRequestRepository(h.DB)
-	err := teamRepo.ApproveUserTeam(r.Context(), teamId, userId)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := teamRepo.ApproveUserTeam(c.Request.Context(), teamId, userId); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"data": "User approved and added to team successfully"})
+	c.JSON(http.StatusOK, gin.H{"data": "User approved and added to team successfully"})
 }
 
-// Удаляет пользователя из команды
-func (h *Handler) LeaveUserFromTeam(w http.ResponseWriter, r *http.Request, teamId openapi_types.UUID, userId openapi_types.UUID) {
+func (h *Handler) LeaveUserFromTeam(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID) {
 	teamRepo := repository.NewTeamMemberRequestRepository(h.DB)
-	err := teamRepo.LeaveUserFromTeam(r.Context(), teamId, userId)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	if err := teamRepo.LeaveUserFromTeam(c.Request.Context(), teamId, userId); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"data": "User removed from team successfully"})
+	c.JSON(http.StatusOK, gin.H{"data": "User removed from team successfully"})
 }
 
-func (h *Handler) TeamMembers(w http.ResponseWriter, r *http.Request, teamId openapi_types.UUID) {
-	// нужно по парамтрам иметь возможноть получать pending user'ов для опрува
+func (h *Handler) TeamMembers(c *gin.Context, teamId openapi_types.UUID) {
 	teamRepo := repository.NewTeamMemberRequestRepository(h.DB)
-	members, err := teamRepo.TeamMembers(r.Context(), teamId)
+	members, err := teamRepo.TeamMembers(c.Request.Context(), teamId)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, model.NewUsersFromModels(members))
+	c.JSON(http.StatusOK, model.NewUsersFromModels(members))
 }

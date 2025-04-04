@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 
@@ -9,24 +8,26 @@ import (
 	"ctf01d/internal/httpserver"
 	"ctf01d/internal/model"
 	"ctf01d/internal/repository"
+	"github.com/gin-gonic/gin"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
-	// fixme обернуть в транзакцию, т.к. две вставки подряд
+func (h *Handler) CreateUser(c *gin.Context) {
 	var user httpserver.UserRequest
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+	if err := c.ShouldBindJSON(&user); err != nil {
 		slog.Warn(err.Error(), "handler", "CreateUserHandler")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
+
 	repo := repository.NewUserRepository(h.DB)
 	passwordHash, err := helper.HashPassword(user.Password)
 	if err != nil {
 		slog.Warn(err.Error(), "handler", "CreateUserHandler")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid password hash"})
 		return
 	}
+
 	newUser := &model.User{
 		Username:     user.UserName,
 		DisplayName:  helper.ToNullString(user.DisplayName),
@@ -35,80 +36,85 @@ func (h *Handler) CreateUser(w http.ResponseWriter, r *http.Request) {
 		PasswordHash: passwordHash,
 		AvatarUrl:    helper.ToNullString(user.AvatarUrl),
 	}
-	if err = repo.Create(r.Context(), newUser); err != nil {
+
+	if err = repo.Create(c, newUser); err != nil {
 		slog.Warn(err.Error(), "handler", "CreateUserHandler")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create user"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
+
 	if user.TeamIds != nil && len(*user.TeamIds) > 0 {
-		if err := repo.AddUserToTeams(r.Context(), newUser.Id, user.TeamIds); err != nil {
+		if err := repo.AddUserToTeams(c, newUser.Id, user.TeamIds); err != nil {
 			slog.Warn(err.Error(), "handler", "CreateUserHandler")
-			helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to add user to teams"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add user to teams"})
 			return
 		}
 	}
-	helper.RespondWithJSON(w, http.StatusOK, newUser.ToResponse())
+
+	c.JSON(http.StatusOK, newUser.ToResponse())
 }
 
-func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (h *Handler) DeleteUser(c *gin.Context, id openapi_types.UUID) {
 	repo := repository.NewUserRepository(h.DB)
-	if err := repo.Delete(r.Context(), id); err != nil {
+	if err := repo.Delete(c, id); err != nil {
 		slog.Warn(err.Error(), "handler", "DeleteUserHandler")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to delete user"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"data": "User deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"data": "User deleted successfully"})
 }
 
-func (h *Handler) GetUserById(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (h *Handler) GetUserById(c *gin.Context, id openapi_types.UUID) {
 	repo := repository.NewUserRepository(h.DB)
-	user, err := repo.GetById(r.Context(), id)
+	user, err := repo.GetById(c, id)
 	if err != nil {
 		slog.Warn(err.Error(), "handler", "GetUserByIdHandler")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to fetch user"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, user.ToResponse())
+	c.JSON(http.StatusOK, user.ToResponse())
 }
 
-func (h *Handler) GetProfileById(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (h *Handler) GetProfileById(c *gin.Context, id openapi_types.UUID) {
 	repo := repository.NewUserRepository(h.DB)
-	userProfile, err := repo.GetProfileWithHistory(r.Context(), id)
+	userProfile, err := repo.GetProfileWithHistory(c, id)
 	if err != nil {
 		slog.Info(err.Error(), "handler", "GetProfileByIdHandler")
-		helper.RespondWithJSON(w, http.StatusNotFound, map[string]string{"data": "User have not profile"})
+		c.JSON(http.StatusNotFound, gin.H{"data": "User has no profile"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, userProfile.ToResponse())
+	c.JSON(http.StatusOK, userProfile.ToResponse())
 }
 
-func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListUsers(c *gin.Context) {
 	repo := repository.NewUserRepository(h.DB)
-	users, err := repo.List(r.Context())
+	users, err := repo.List(c)
 	if err != nil {
 		slog.Warn(err.Error(), "handler", "ListUsersHandler")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, model.NewUsersFromModels(users))
+	c.JSON(http.StatusOK, model.NewUsersFromModels(users))
 }
 
-func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	// fixme update не проверяет есть ли запись в бд
+func (h *Handler) UpdateUser(c *gin.Context, id openapi_types.UUID) {
 	var user httpserver.UserRequest
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+	if err := c.ShouldBindJSON(&user); err != nil {
 		slog.Warn(err.Error(), "handler", "UpdateUserHandler")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
+
 	passwordHash, err := helper.HashPassword(user.Password)
 	if err != nil {
 		slog.Warn(err.Error(), "handler", "UpdateUserHandler")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid password"})
 		return
 	}
+
 	repo := repository.NewUserRepository(h.DB)
 	updateUser := &model.User{
+		Id:           id,
 		Username:     user.UserName,
 		DisplayName:  helper.ToNullString(user.DisplayName),
 		Role:         user.Role,
@@ -116,12 +122,12 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request, id openapi_
 		PasswordHash: passwordHash,
 		AvatarUrl:    helper.ToNullString(user.AvatarUrl),
 	}
-	updateUser.Id = id
-	err = repo.Update(r.Context(), updateUser)
-	if err != nil {
+
+	if err := repo.Update(c, updateUser); err != nil {
 		slog.Warn(err.Error(), "handler", "UpdateUserHandler")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"data": "User updated successfully"})
+
+	c.JSON(http.StatusOK, gin.H{"data": "User updated successfully"})
 }

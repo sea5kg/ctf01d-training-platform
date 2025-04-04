@@ -48,6 +48,8 @@ paths:
         Authenticates a user by user_name and password, starts a new session,
         and returns a session cookie.
       operationId: signInUser
+      security:
+        - sessionAuth: []
       requestBody:
         required: true
         content:
@@ -97,6 +99,8 @@ paths:
         Authenticates a user by user_name and password, starts a new session,
         and returns a session cookie.
       operationId: signOutUser
+      security:
+        - sessionAuth: []
       responses:
         '200':
           description: User logout successfully. A session cookie is remove.
@@ -162,6 +166,8 @@ paths:
         - Users
       summary: Create a new user
       operationId: createUser
+      security:
+        - sessionAuth: []
       parameters: []
       requestBody:
         content:
@@ -211,6 +217,8 @@ paths:
       tags:
         - Users
       summary: Update a user
+      security:
+        - sessionAuth: []
       operationId: updateUser
       parameters:
         - name: userId
@@ -240,6 +248,8 @@ paths:
         - Users
       summary: Delete a user
       operationId: deleteUser
+      security:
+        - sessionAuth: []
       parameters:
         - name: userId
           in: path
@@ -309,6 +319,8 @@ paths:
         - Games
       summary: Create a new game
       operationId: createGame
+      security:
+        - sessionAuth: []
       parameters: []
       requestBody:
         content:
@@ -358,6 +370,8 @@ paths:
       tags:
         - Games
       summary: Update a game
+      security:
+        - sessionAuth: []
       operationId: updateGame
       parameters:
         - name: gameId
@@ -392,6 +406,8 @@ paths:
       tags:
         - Games
       summary: Delete a game
+      security:
+        - sessionAuth: []
       operationId: deleteGame
       parameters:
         - name: gameId
@@ -442,6 +458,8 @@ paths:
         - Teams
       summary: Create a new team
       operationId: createTeam
+      security:
+        - sessionAuth: []
       parameters: []
       requestBody:
         content:
@@ -494,6 +512,8 @@ paths:
         - Teams
       summary: Update a team
       operationId: updateTeam
+      security:
+        - sessionAuth: []
       parameters:
         - name: teamId
           in: path
@@ -518,6 +538,8 @@ paths:
         - Teams
       summary: Delete a team
       operationId: deleteTeam
+      security:
+        - sessionAuth: []
       parameters:
         - name: teamId
           in: path
@@ -561,6 +583,8 @@ paths:
         - Teams
       summary: Connect user with team
       operationId: connectUserTeam
+      security:
+        - sessionAuth: []
       parameters:
         - in: path
           name: teamId
@@ -591,6 +615,8 @@ paths:
         - Teams
       summary: Approve connected user with team lead
       operationId: approveUserTeam
+      security:
+        - sessionAuth: []
       parameters:
         - in: path
           name: teamId
@@ -621,6 +647,8 @@ paths:
         - Teams
       summary: Leave user from team
       operationId: leaveUserFromTeam
+      security:
+        - sessionAuth: []
       parameters:
         - in: path
           name: teamId
@@ -659,6 +687,8 @@ paths:
             format: uuid
       summary: Create a new game result
       operationId: createResult
+      security:
+        - sessionAuth: []
       requestBody:
         content:
           application/json:
@@ -709,6 +739,8 @@ paths:
         - Results
       summary: Update a result
       operationId: updateResult
+      security:
+        - sessionAuth: []
       parameters:
         - in: path
           name: gameId
@@ -780,6 +812,8 @@ paths:
         - Services
       summary: Create a new service
       operationId: createService
+      security:
+        - sessionAuth: []
       parameters: []
       requestBody:
         content:
@@ -822,6 +856,8 @@ paths:
         - Services
       summary: Update a service
       operationId: updateService
+      security:
+        - sessionAuth: []
       parameters:
         - name: serviceId
           in: path
@@ -846,6 +882,8 @@ paths:
         - Services
       summary: Delete a service
       operationId: deleteService
+      security:
+        - sessionAuth: []
       parameters:
         - name: serviceId
           in: path
@@ -864,6 +902,8 @@ paths:
       tags:
         - Services
       summary: Upload zip-archive
+      security:
+        - sessionAuth: []
       description: |
         Handler for upload zip-archive with checker
       operationId: uploadChecker
@@ -898,6 +938,8 @@ paths:
       tags:
         - Services
       operationId: uploadService
+      security:
+        - sessionAuth: []
       parameters:
         - in: path
           name: serviceId
@@ -1375,4 +1417,9 @@ components:
           format: uuid
   links: {}
   callbacks: {}
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session
 security: []

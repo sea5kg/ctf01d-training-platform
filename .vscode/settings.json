@@ -3,6 +3,7 @@
         "config",
         "api",
         "test",
-        "deps"
+        "deps",
+        "core"
     ]
 }

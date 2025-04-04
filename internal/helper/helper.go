@@ -2,9 +2,6 @@ package helper
 
 import (
 	"database/sql"
-	"encoding/json"
-	"log/slog"
-	"net/http"
 	"net/url"
 
 	"ctf01d/internal/httpserver"
@@ -39,22 +36,6 @@ func ToNullString(s *string) sql.NullString {
 
 func WithDefault(img string) string {
 	return "api/v1/avatar/" + url.QueryEscape(img)
-}
-
-func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	response, err := json.Marshal(payload)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		if _, err := w.Write([]byte(`{"error": "Error marshaling the response object"}`)); err != nil {
-			slog.Error("Error writing error response: " + err.Error())
-		}
-		return
-	}
-	w.WriteHeader(code)
-	if _, err := w.Write(response); err != nil {
-		slog.Error("Error writing response: " + err.Error())
-	}
 }
 
 func ConvertUserRequestRoleToUserResponseRole(role httpserver.UserRequestRole) httpserver.UserResponseRole {

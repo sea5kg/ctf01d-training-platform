@@ -1,102 +1,104 @@
 package handler
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 
-	"ctf01d/internal/helper"
 	"ctf01d/internal/httpserver"
 	"ctf01d/internal/model"
 	"ctf01d/internal/repository"
+	"github.com/gin-gonic/gin"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
-func (h *Handler) CreateGame(w http.ResponseWriter, r *http.Request) {
-	var game httpserver.GameRequest
-	var err error
-	if err := json.NewDecoder(r.Body).Decode(&game); err != nil {
+func (h *Handler) CreateGame(c *gin.Context) {
+	var game httpserver.CreateGameJSONRequestBody
+	if err := c.ShouldBindJSON(&game); err != nil {
 		slog.Warn(err.Error(), "handler", "CreateGame")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
 	if game.EndTime.Before(game.StartTime) {
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "EndTime must be after StartTime"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "EndTime must be after StartTime"})
 		return
 	}
 	repo := repository.NewGameRepository(h.DB)
 	newGame := &model.Game{
-		StartTime:   game.StartTime,
-		EndTime:     game.EndTime,
-		Description: *game.Description,
+		StartTime: game.StartTime,
+		EndTime:   game.EndTime,
 	}
 
-	err = repo.Create(r.Context(), newGame)
-	if err != nil {
+	if game.Description != nil {
+		newGame.Description = *game.Description
+	}
+
+	if err := repo.Create(c.Request.Context(), newGame); err != nil {
 		slog.Warn(err.Error(), "handler", "CreateGame")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create game"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create game"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, newGame.ToResponse())
+	c.JSON(http.StatusOK, newGame.ToResponse())
 }
 
-func (h *Handler) DeleteGame(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (h *Handler) DeleteGame(c *gin.Context, id openapi_types.UUID) {
 	repo := repository.NewGameRepository(h.DB)
-	if err := repo.Delete(r.Context(), id); err != nil {
+	if err := repo.Delete(c.Request.Context(), id); err != nil {
 		slog.Warn(err.Error(), "handler", "DeleteGame")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to delete game"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete game"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"data": "Game deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"data": "Game deleted successfully"})
 }
 
-func (h *Handler) GetGameById(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (h *Handler) GetGameById(c *gin.Context, id openapi_types.UUID) {
 	repo := repository.NewGameRepository(h.DB)
-	game, err := repo.GetGameDetails(r.Context(), id) // короткий ответ, если нужен см. GetById
+	game, err := repo.GetGameDetails(c.Request.Context(), id)
 	if err != nil {
 		slog.Warn(err.Error(), "handler", "GetGameById")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to fetch game"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch game"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, game.ToResponseGameDetails())
+	c.JSON(http.StatusOK, game.ToResponseGameDetails())
 }
 
-func (h *Handler) ListGames(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListGames(c *gin.Context) {
 	repo := repository.NewGameRepository(h.DB)
-	games, err := repo.ListGamesDetails(r.Context())
+	games, err := repo.ListGamesDetails(c.Request.Context())
 	if err != nil {
 		slog.Warn(err.Error(), "handler", "ListGames")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Failed to fetch games"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch games"})
 		return
 	}
 	gameResponses := make([]*httpserver.GameResponse, 0, len(games))
 	for _, game := range games {
 		gameResponses = append(gameResponses, game.ToResponseGameDetails())
 	}
-
-	helper.RespondWithJSON(w, http.StatusOK, gameResponses)
+	c.JSON(http.StatusOK, gameResponses)
 }
 
-func (h *Handler) UpdateGame(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	// fixme update не проверяет есть ли запись в бд
-	var game httpserver.GameRequest
-	if err := json.NewDecoder(r.Body).Decode(&game); err != nil {
+func (h *Handler) UpdateGame(c *gin.Context, id openapi_types.UUID) {
+	var game httpserver.UpdateGameJSONRequestBody
+
+	if err := c.ShouldBindJSON(&game); err != nil {
 		slog.Warn(err.Error(), "handler", "UpdateGame")
-		helper.RespondWithJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request payload"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request payload"})
 		return
 	}
 	repo := repository.NewGameRepository(h.DB)
 	updateGame := &model.Game{
-		StartTime:   game.StartTime,
-		EndTime:     game.EndTime,
-		Description: *game.Description,
+		Id:        id,
+		StartTime: game.StartTime,
+		EndTime:   game.EndTime,
 	}
-	updateGame.Id = id
-	err := repo.Update(r.Context(), updateGame)
-	if err != nil {
+	if game.Description != nil {
+		updateGame.Description = *game.Description
+	}
+
+	if err := repo.Update(c.Request.Context(), updateGame); err != nil {
 		slog.Warn(err.Error(), "handler", "UpdateGame")
-		helper.RespondWithJSON(w, http.StatusInternalServerError, map[string]string{"error": "Invalid request payload"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update game"})
 		return
 	}
-	helper.RespondWithJSON(w, http.StatusOK, map[string]string{"data": "Game updated successfully"})
+
+	c.JSON(http.StatusOK, gin.H{"data": "Game updated successfully"})
 }

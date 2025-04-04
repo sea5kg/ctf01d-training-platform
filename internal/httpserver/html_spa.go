@@ -1,50 +1,45 @@
 package httpserver
 
 import (
-	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
 var tmplPath = "./html/"
 
-func NewHtmlRouter(w http.ResponseWriter, req *http.Request) {
-	if strings.HasPrefix(req.URL.Path, "/api/") {
-		err := errors.New("not found api handler")
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
+func NewHtmlRouter() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		reqPath := c.Request.URL.Path
 
-	// https://github.com/gorilla/mux?tab=readme-ov-file#serving-single-page-applications
-	// can it possible ../../etc/hosts ?
-	path := filepath.Join(tmplPath, req.URL.Path)
-	// check whether a file exists or is a directory at the given path
-	fi, err := os.Stat(path)
-	if (os.IsNotExist(err) || fi.IsDir()) && strings.HasPrefix(req.URL.Path, "/assets/") {
-		err := errors.New("file in assests not found")
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-	if os.IsNotExist(err) || fi.IsDir() {
-		// file does not exist or path is a directory, serve index.html
-		http.ServeFile(w, req, filepath.Join(tmplPath, "index.html"))
-		return
-	}
+		if strings.HasPrefix(reqPath, "/api/") || strings.HasSuffix(reqPath, "/api") {
+			c.String(http.StatusNotFound, "API handler not found")
+			return
+		}
 
-	if err != nil {
-		// if we got an error (that wasn't that the file doesn't exist) stating the
-		// file, return a 500 internal server error and stop
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+		cleanPath := filepath.Clean(filepath.Join(tmplPath, reqPath))
+		fi, err := os.Stat(cleanPath)
 
-	if strings.HasSuffix(req.URL.Path, "/api") {
-		err := errors.New("not found api handler")
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
+		if (os.IsNotExist(err) || fi.IsDir()) && strings.HasPrefix(reqPath, "/assets/") {
+			c.String(http.StatusNotFound, "File in assets not found")
+			return
+		}
+
+		if os.IsNotExist(err) || fi.IsDir() {
+			// Serve index.html для SPA
+			c.File(filepath.Join(tmplPath, "index.html"))
+			return
+		}
+
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		// Serve static file
+		http.ServeFile(c.Writer, c.Request, cleanPath)
 	}
-	// otherwise, use http.FileServer to serve the static file
-	http.FileServer(http.Dir(tmplPath)).ServeHTTP(w, req)
 }

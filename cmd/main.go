@@ -1,16 +1,21 @@
 package main
 
 import (
+	"context"
+	"log"
 	"log/slog"
-	"net/http"
 	"os"
 
 	"ctf01d/internal/config"
 	"ctf01d/internal/handler"
 	"ctf01d/internal/httpserver"
 	migration "ctf01d/internal/migrations/psql"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/cors"
+	"ctf01d/pkg/ginmiddleware"
+
+	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/getkin/kin-openapi/openapi3filter"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	_ "go.uber.org/automaxprocs"
 )
@@ -33,36 +38,49 @@ func main() {
 	slog.Info("Config path is - " + path)
 	db, err := migration.InitDatabase(cfg)
 	if err != nil {
-		slog.Error("Error opening database connection: " + err.Error())
-		return
+		slog.Error("Database connection error: " + err.Error())
+		os.Exit(1)
 	}
-	slog.Info("Database connection established successfully")
 	defer db.Close()
-	router := chi.NewRouter()
+	slog.Info("Database connection established successfully")
+	router := gin.New()
+	router.Use(gin.Recovery(), gin.Logger())
 
 	// Добавление CORS middleware
-	corsMiddleware := cors.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true,
-		MaxAge:           300,
+	router.Use(cors.Default())
+
+	// Загрузка спецификации OpenAPI
+	swagger, err := openapi3.NewLoader().LoadFromFile("api/openapi.yaml")
+	if err != nil {
+		log.Fatalf("Failed to load OpenAPI spec: %v", err)
+	}
+
+	// OpenAPI middleware валидации запросов
+	requestValidator := ginmiddleware.OapiRequestValidatorWithOptions(swagger, &ginmiddleware.Options{
+		Options: openapi3filter.Options{
+			AuthenticationFunc: func(_ context.Context, _ *openapi3filter.AuthenticationInput) error {
+				return nil
+			},
+		},
 	})
 
-	router.Use(corsMiddleware.Handler)
+	// OpenAPI middleware валидации ответов
+	responseValidator := ginmiddleware.OapiResponseValidator(swagger)
+	hndlr := &handler.Handler{DB: db}
 
-	hndlr := &handler.Handler{
-		DB: db,
-	}
-	svr := handler.NewServerInterfaceWrapper(hndlr)
+	// API-группа, к которой применяются валидаторы
+	apiGroup := router.Group("/", requestValidator, responseValidator)
+	httpserver.RegisterHandlers(apiGroup, hndlr)
 
-	router.Mount("/api/", httpserver.HandlerFromMux(svr, router))
-	router.Mount("/", http.HandlerFunc(httpserver.NewHtmlRouter))
+	// HTML маршрутизатор для корня
+	router.GET("/", httpserver.NewHtmlRouter())
+	router.NoRoute(httpserver.NewHtmlRouter())
 
-	slog.Info("Server run on", slog.String("host", cfg.HTTP.Host), slog.String("port", cfg.HTTP.Port))
-	err = http.ListenAndServe(cfg.HTTP.Host+":"+cfg.HTTP.Port, router)
-	if err != nil {
+	// Запуск сервера
+	addr := cfg.HTTP.Host + ":" + cfg.HTTP.Port
+	slog.Info("Server running on", slog.String("address", addr))
+	if err := router.Run(addr); err != nil {
 		slog.Error("Server error: " + err.Error())
+		os.Exit(1)
 	}
 }
