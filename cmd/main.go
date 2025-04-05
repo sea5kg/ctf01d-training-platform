@@ -9,12 +9,15 @@ import (
 	"ctf01d/internal/config"
 	"ctf01d/internal/handler"
 	"ctf01d/internal/httpserver"
+	"ctf01d/internal/middleware/auth"
 	migration "ctf01d/internal/migrations/psql"
 	"ctf01d/pkg/ginmiddleware"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 	_ "go.uber.org/automaxprocs"
@@ -31,11 +34,14 @@ func main() {
 		slog.Error("Config error: " + err.Error())
 		os.Exit(1)
 	}
+
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.Level(cfg.ParseLogLevel(cfg.Log.Level)),
 	}))
 	slog.SetDefault(logger)
 	slog.Info("Config path is - " + path)
+
+	// Подключение к БД
 	db, err := migration.InitDatabase(cfg)
 	if err != nil {
 		slog.Error("Database connection error: " + err.Error())
@@ -70,7 +76,18 @@ func main() {
 
 	// API-группа, к которой применяются валидаторы
 	apiGroup := router.Group("/", requestValidator, responseValidator)
-	httpserver.RegisterHandlers(apiGroup, hndlr)
+	options := httpserver.GinServerOptions{
+		Middlewares: []httpserver.MiddlewareFunc{
+			auth.AuthenticationMiddleware(db),
+		},
+	}
+	// Session auth store
+	store, err := redis.NewStore(10, "tcp", "localhost", "", []byte("secret"))
+	if err != nil {
+		slog.Error("Failed to create session store" + err.Error())
+	}
+	router.Use(sessions.Sessions("session", store))
+	httpserver.RegisterHandlersWithOptions(apiGroup, hndlr, options)
 
 	// HTML маршрутизатор для корня
 	router.GET("/", httpserver.NewHtmlRouter())
