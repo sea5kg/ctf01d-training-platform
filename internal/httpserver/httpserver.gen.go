@@ -513,8 +513,6 @@ func (siw *ServerInterfaceWrapper) ValidateSession(c *gin.Context) {
 // SignInUser operation middleware
 func (siw *ServerInterfaceWrapper) SignInUser(c *gin.Context) {
 
-	c.Set(SessionAuthScopes, []string{})
-
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {

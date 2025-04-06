@@ -48,8 +48,6 @@ paths:
         Authenticates a user by user_name and password, starts a new session,
         and returns a session cookie.
       operationId: signInUser
-      security:
-        - sessionAuth: []
       requestBody:
         required: true
         content:
