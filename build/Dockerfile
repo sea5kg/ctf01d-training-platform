@@ -20,6 +20,7 @@ WORKDIR /app
 COPY --from=builder /app/server .
 COPY --from=builder /app/configs ./configs
 COPY --from=builder /app/html ./html
+COPY --from=builder /app/api/openapi.yaml api/openapi.yaml
 
 EXPOSE 4102
 
