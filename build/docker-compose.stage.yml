@@ -1,5 +1,5 @@
 services:
-  # ctf01d_backend:
+  # app:
   #   image: ghcr.io/sea-kg/ctf01d-training-platform:latest
   #   environment:
   #     CONFIG_PATH: "configs/config.production.yml"
@@ -28,7 +28,7 @@ services:
       - ./nginx/certbot/conf:/etc/letsencrypt
       - ./nginx/certbot/www:/var/www/certbot
     depends_on:
-      - ctf01d_backend
+      - app
     networks:
       - ctf01d_net
 
