@@ -31,6 +31,9 @@ fmt:
 	go fmt ./internal/...; \
 	go fmt ./cmd/...;
 
+docker-compose-up-build:
+	docker compose -f build/docker-compose.yml up --build
+
 # Run PostgreSQL container for local development
 database-run:
 	@if [ $$(docker ps -a -q -f name=ctf01d-postgres) ]; then \

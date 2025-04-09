@@ -1,22 +1,22 @@
 services:
-  ctf01d_backend:
-    image: ghcr.io/sea-kg/ctf01d-training-platform:latest
-    environment:
-      CONFIG_PATH: "configs/config.production.yml"
-    depends_on:
-      - ctf_training_platform_db
-    restart: always
-    networks:
-      - ctf01d_net
+  # app:
+  #   image: ghcr.io/sea-kg/ctf01d-training-platform:latest
+  #   environment:
+  #     CONFIG_PATH: "configs/config.production.yml"
+  #   depends_on:
+  #     - ctf_training_platform_db
+  #   restart: always
+  #   networks:
+  #     - ctf01d_net
 
-  ctf01d_frontend:
-    image: ghcr.io/alexbazh/ctf01d-front:latest
-    ports:
-      - "1337:1337"
-    depends_on:
-      - ctf01d_backend
-    networks:
-      - ctf01d_net
+  # ctf01d_frontend:
+  #   image: ghcr.io/alexbazh/ctf01d-front:latest
+  #   ports:
+  #     - "1337:1337"
+  #   depends_on:
+  #     - ctf01d_backend
+  #   networks:
+  #     - ctf01d_net
 
   nginx:
     image: nginx:latest
@@ -28,7 +28,7 @@ services:
       - ./nginx/certbot/conf:/etc/letsencrypt
       - ./nginx/certbot/www:/var/www/certbot
     depends_on:
-      - ctf01d_backend
+      - app
     networks:
       - ctf01d_net
 

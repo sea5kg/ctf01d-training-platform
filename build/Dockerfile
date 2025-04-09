@@ -1,28 +1,26 @@
-FROM golang:1.24-bookworm as builder
+FROM golang:1.24-bookworm AS builder
 
-WORKDIR /ctf01d.ru
+WORKDIR /app
 
-COPY ./go.mod ./
-COPY ./go.sum ./
+COPY go.mod go.sum ./
+RUN go mod download
 
-RUN go mod tidy
-
-COPY ./ ./
+COPY . .
 
 ARG VERSION
 ARG BUILDTIME
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-X 'ctf01d/internal/handler.version=${VERSION}' -X ctf01d/internal/handler.buildTime=${BUILDTIME}" -o server cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-X 'ctf01d/internal/handler.version=${VERSION}' -X 'ctf01d/internal/handler.buildTime=${BUILDTIME}'" -o server ./cmd/main.go
 
-FROM alpine:latest as prod
-LABEL "maintainer"="Evgenii Sopov <mrseakg@gmail.com>"
-LABEL "repository"="https://github.com/sea5kg/ctf01d-training-platform"
+FROM alpine:latest AS prod
+LABEL maintainer="Evgenii Sopov <mrseakg@gmail.com>"
+LABEL repository="https://github.com/sea5kg/ctf01d-training-platform"
 RUN apk --no-cache add ca-certificates
 
-WORKDIR /ctf01d.ru
-
-COPY --from=builder /ctf01d.ru/server .
-COPY --from=builder /ctf01d.ru/configs/ ./configs/
-COPY --from=builder /ctf01d.ru/html/ ./html/
+WORKDIR /app
+COPY --from=builder /app/server .
+COPY --from=builder /app/configs ./configs
+COPY --from=builder /app/html ./html
+COPY --from=builder /app/api/openapi.yaml api/openapi.yaml
 
 EXPOSE 4102
 
