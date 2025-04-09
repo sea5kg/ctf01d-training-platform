@@ -13,7 +13,8 @@ services:
       - ctf01d_net
 
   ctf01d_backend:
-    build: .
+    build: ../
+    dockerfile: ./Dockerfile
     depends_on:
       - ctf_training_platform_db
     ports:
