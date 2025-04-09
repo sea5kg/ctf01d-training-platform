@@ -32,7 +32,7 @@ fmt:
 	go fmt ./cmd/...;
 
 docker-compose-up-build:
-	docker compose -f build/docker-compose.yml -f build/docker-compose.stage.yml up --build
+	docker compose -f build/docker-compose.yml up --build
 
 # Run PostgreSQL container for local development
 database-run:
