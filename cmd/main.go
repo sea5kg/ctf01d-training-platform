@@ -13,6 +13,7 @@ import (
 	"ctf01d/internal/middleware/auth"
 	migration "ctf01d/internal/migrations/psql"
 	"ctf01d/internal/repository"
+	"ctf01d/internal/repository/casbinrepo"
 	"ctf01d/pkg/ginmiddleware"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -77,9 +78,21 @@ func main() {
 	// API-группа, к которой применяются валидаторы
 	apiGroup := router.Group("/", requestValidator, responseValidator)
 	sessionRepo := repository.NewSessionRepository(db)
+	// Casbin
+	enforcer, err := casbinrepo.NewEnforcer()
+	if err != nil {
+		slog.Error("failed to initialize Casbin enforcer: " + err.Error())
+		os.Exit(1)
+	}
+
+	if err := casbinrepo.LoadPolicies(enforcer, db); err != nil {
+		slog.Error("failed to load policies: " + err.Error())
+		os.Exit(1)
+	}
 	options := httpserver.GinServerOptions{
 		Middlewares: []httpserver.MiddlewareFunc{
 			auth.AuthenticationMiddleware(sessionRepo),
+			auth.AuthorizationMiddleware(enforcer),
 		},
 	}
 	httpserver.RegisterHandlersWithOptions(apiGroup, hndlr, options)

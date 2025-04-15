@@ -51,7 +51,8 @@ func RegisterAllUpdates() map[string][]DatabaseUpdateFunc {
 	allUpdates = RegisterDatabaseUpdate(allUpdates, DatabaseUpdate_update0020_update0020testdata)
 	allUpdates = RegisterDatabaseUpdate(allUpdates, DatabaseUpdate_update0020_update0021)
 	allUpdates = RegisterDatabaseUpdate(allUpdates, DatabaseUpdate_update0021_update0022)
-
+	allUpdates = RegisterDatabaseUpdate(allUpdates, DatabaseUpdate_update0022_update0023)
+	allUpdates = RegisterDatabaseUpdate(allUpdates, DatabaseUpdate_update0023_update0023testdata)
 	return allUpdates
 }
 
@@ -214,7 +215,7 @@ func InitDatabase(cfg *config.Config) (*sql.DB, error) {
 		}
 	}
 	// successfully
-	slog.Info("Database inited.")
+	slog.Info("Database inited")
 	return db, nil
 }
 
