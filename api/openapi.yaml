@@ -787,7 +787,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ResultResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/ResultResponse'
   /api/v1/services:
     get:
       tags:
