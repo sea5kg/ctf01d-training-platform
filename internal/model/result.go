@@ -2,6 +2,7 @@ package model
 
 import (
 	"ctf01d/internal/httpserver"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 

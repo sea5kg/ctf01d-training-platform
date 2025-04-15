@@ -1,4 +1,3 @@
-
 var entityMap = {
     '&': '&amp;',
     '<': '&lt;',
@@ -240,16 +239,16 @@ function renderGamesPage() {
         for (var i in res) {
             var game_info = res[i];
             // console.log("game_info", game_info);
-            gamesHtml += '<div href="#" class="list-group-item list-group-item-action flex-column align-items-start">';
-            gamesHtml += '  <div class="d-flex w-100 justify-content-between">';
-            gamesHtml += '    <h5 class="mb-1">#' + game_info.id + '</h5>';
-            gamesHtml += '    <button type="button" class="btn btn-info">' + tr('Результаты игры') + '</button>';
-            gamesHtml += '    <small>' + getHumanTimeHasPassed(new Date(game_info.end_time)) + '</small>';
+            gamesHtml += '<div class="list-group-item list-group-item-action flex-column align-items-start mb-3 p-3 shadow-sm rounded">';
+            gamesHtml += '  <div class="d-flex w-100 justify-content-between align-items-center mb-2">';
+            gamesHtml += '    <h5 class="mb-0 fw-bold">#' + game_info.id + '</h5>';
+            gamesHtml += '    <button type="button" class="btn btn-info btn-sm">' + tr('Результаты игры') + '</button>';
+            gamesHtml += '    <small class="text-muted">' + getHumanTimeHasPassed(new Date(game_info.end_time)) + '</small>';
             gamesHtml += '  </div>';
-            gamesHtml += '  <p class="mb-1">' + escapeHtml(game_info.description) + '</p>';
-            gamesHtml += '  <small>Начало: ' + new Date(game_info.start_time) + '</small><br>';
-            gamesHtml += '  <small>Конец: ' + new Date(game_info.end_time) + '</small><br><br>';
-            gamesHtml += '  <div id="game_teams_' + game_info.id + '"> ' + new Date(game_info.end_time) + '</div>';
+            gamesHtml += '  <p class="mb-2">' + escapeHtml(game_info.description) + '</p>';
+            gamesHtml += '  <div class="mb-1"><span class="fw-bold">Начало:</span> <span class="text-muted">' + new Date(game_info.start_time).toLocaleString() + '</span></div>';
+            gamesHtml += '  <div class="mb-2"><span class="fw-bold">Конец:</span> <span class="text-muted">' + new Date(game_info.end_time).toLocaleString() + '</span></div>';
+            gamesHtml += '  <div id="game_teams_' + game_info.id + '" class="mt-2"></div>';
             gamesHtml += '</div>';
             updateGameTeams('game_teams_' + game_info.id, game_info.id)
         }
