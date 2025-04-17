@@ -5,6 +5,7 @@ import (
 
 	"ctf01d/internal/helper"
 	"ctf01d/internal/httpserver"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -19,7 +20,7 @@ type User struct {
 }
 
 func (u *User) ToResponse() *httpserver.UserResponse {
-	userRole := helper.ConvertUserRequestRoleToUserResponseRole(u.Role)
+	userRole := httpserver.UserResponseRole(u.Role)
 	var avatarUrl string
 	if u.AvatarUrl.Valid {
 		avatarUrl = u.AvatarUrl.String
