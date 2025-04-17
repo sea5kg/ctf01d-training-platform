@@ -11,17 +11,17 @@ import (
 	"time"
 
 	"ctf01d/internal/config"
-	"ctf01d/internal/handler"
-	"ctf01d/internal/httpserver"
 	migration "ctf01d/internal/migrations/psql"
-	"github.com/go-chi/chi/v5"
+
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 	"github.com/jaswdr/faker"
 	_ "github.com/lib/pq"
 )
 
 var (
-	db *sql.DB
-	r  *chi.Mux
+	db     *sql.DB
+	router *gin.Engine
 )
 
 func TestMain(m *testing.M) {
@@ -46,16 +46,12 @@ func TestMain(m *testing.M) {
 }
 
 func NewTestRouter() (http.Handler, error) {
-	h := &handler.Handler{
-		DB: db,
-	}
-	svr := handler.NewServerInterfaceWrapper(h)
+	router = gin.New()
+	router.Use(gin.Recovery(), gin.Logger())
 
-	r = chi.NewRouter()
-	r.Mount("/api/", httpserver.HandlerFromMux(svr, r))
-	r.Mount("/", http.HandlerFunc(httpserver.NewHtmlRouter))
+	router.Use(cors.Default())
 
-	return r, nil
+	return router, nil
 }
 
 func TestUserCRUD(t *testing.T) {
@@ -77,7 +73,7 @@ func TestUserCRUD(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/api/v1/users", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -106,7 +102,7 @@ func TestUserCRUD(t *testing.T) {
 	t.Run("Get All Users", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/v1/users", nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -132,7 +128,7 @@ func TestUserCRUD(t *testing.T) {
 	t.Run("Get User by ID", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/v1/users/"+userID, nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -169,7 +165,7 @@ func TestUserCRUD(t *testing.T) {
 		req, _ := http.NewRequest("PUT", "/api/v1/users/"+userID, bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -187,7 +183,7 @@ func TestUserCRUD(t *testing.T) {
 		// Проверка всех полей ответа после обновления
 		req, _ = http.NewRequest("GET", "/api/v1/users/"+userID, nil)
 		rr = httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -209,7 +205,7 @@ func TestUserCRUD(t *testing.T) {
 	t.Run("User Profile by ID", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/v1/users/"+userID+"/profile", nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusNotFound {
 			t.Fatalf("expected status code 404, got %v", rr.Code)
@@ -220,7 +216,7 @@ func TestUserCRUD(t *testing.T) {
 	t.Run("Delete User by ID", func(t *testing.T) {
 		req, _ := http.NewRequest("DELETE", "/api/v1/users/"+userID, nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -246,7 +242,7 @@ func TestServiceCRUD(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/api/v1/services", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -274,7 +270,7 @@ func TestServiceCRUD(t *testing.T) {
 	t.Run("Get All Services", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/v1/services", nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -300,7 +296,7 @@ func TestServiceCRUD(t *testing.T) {
 	t.Run("Get Service by ID", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/v1/services/"+serviceID, nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -336,7 +332,7 @@ func TestServiceCRUD(t *testing.T) {
 		req, _ := http.NewRequest("PUT", "/api/v1/services/"+serviceID, bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -354,7 +350,7 @@ func TestServiceCRUD(t *testing.T) {
 		// Проверка всех полей ответа после обновления
 		req, _ = http.NewRequest("GET", "/api/v1/services/"+serviceID, nil)
 		rr = httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -376,7 +372,7 @@ func TestServiceCRUD(t *testing.T) {
 	t.Run("Delete Service by ID", func(t *testing.T) {
 		req, _ := http.NewRequest("DELETE", "/api/v1/services/"+serviceID, nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -401,7 +397,7 @@ func TestTeamCRUD(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/api/v1/teams", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -429,7 +425,7 @@ func TestTeamCRUD(t *testing.T) {
 	t.Run("Get All Teams", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/v1/teams", nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -455,7 +451,7 @@ func TestTeamCRUD(t *testing.T) {
 	t.Run("Get Team by ID", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/v1/teams/"+teamID, nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -490,7 +486,7 @@ func TestTeamCRUD(t *testing.T) {
 		req, _ := http.NewRequest("PUT", "/api/v1/teams/"+teamID, bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -508,7 +504,7 @@ func TestTeamCRUD(t *testing.T) {
 		// Проверка всех полей ответа после обновления
 		req, _ = http.NewRequest("GET", "/api/v1/teams/"+teamID, nil)
 		rr = httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -530,7 +526,7 @@ func TestTeamCRUD(t *testing.T) {
 	t.Run("Delete Team by ID", func(t *testing.T) {
 		req, _ := http.NewRequest("DELETE", "/api/v1/teams/"+teamID, nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -554,7 +550,7 @@ func TestGameCRUD(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/api/v1/games", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -582,7 +578,7 @@ func TestGameCRUD(t *testing.T) {
 	t.Run("Get All Games", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/v1/games", nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -613,7 +609,7 @@ func TestGameCRUD(t *testing.T) {
 	t.Run("Get Game by ID", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/v1/games/"+gameID, nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -647,7 +643,7 @@ func TestGameCRUD(t *testing.T) {
 		req, _ := http.NewRequest("PUT", "/api/v1/games/"+gameID, bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -665,7 +661,7 @@ func TestGameCRUD(t *testing.T) {
 		// Проверка всех полей ответа после обновления
 		req, _ = http.NewRequest("GET", "/api/v1/games/"+gameID, nil)
 		rr = httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -687,7 +683,7 @@ func TestGameCRUD(t *testing.T) {
 	t.Run("Delete Game by ID", func(t *testing.T) {
 		req, _ := http.NewRequest("DELETE", "/api/v1/games/"+gameID, nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -712,7 +708,7 @@ func TestTeamMembersCRUD(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/api/v1/teams", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
-	r.ServeHTTP(rr, req)
+	router.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -741,7 +737,7 @@ func TestTeamMembersCRUD(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/api/v1/users", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr = httptest.NewRecorder()
-	r.ServeHTTP(rr, req)
+	router.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -766,7 +762,7 @@ func TestTeamMembersCRUD(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/api/v1/teams/"+teamID+"/members/"+userID, bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -783,7 +779,7 @@ func TestTeamMembersCRUD(t *testing.T) {
 		req, _ := http.NewRequest("PUT", "/api/v1/teams/"+teamID+"/members/"+userID, nil)
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -799,7 +795,7 @@ func TestTeamMembersCRUD(t *testing.T) {
 	t.Run("Get All Team Members", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/v1/teams/"+teamID+"/members", nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -830,7 +826,7 @@ func TestTeamMembersCRUD(t *testing.T) {
 		req, _ := http.NewRequest("PUT", "/api/v1/teams/"+teamID+"/members/"+userID, bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -844,7 +840,7 @@ func TestTeamMembersCRUD(t *testing.T) {
 		// Проверка обновленной роли
 		req, _ = http.NewRequest("GET", "/api/v1/teams/"+teamID+"/members", nil)
 		rr = httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -865,7 +861,7 @@ func TestTeamMembersCRUD(t *testing.T) {
 	t.Run("Delete Member from Team", func(t *testing.T) {
 		req, _ := http.NewRequest("DELETE", "/api/v1/teams/"+teamID+"/members/"+userID, nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -874,7 +870,7 @@ func TestTeamMembersCRUD(t *testing.T) {
 		// Проверка удаления
 		req, _ = http.NewRequest("GET", "/api/v1/teams/"+teamID+"/members", nil)
 		rr = httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -907,7 +903,7 @@ func TestResultsCRUD(t *testing.T) {
 	req, _ := http.NewRequest("POST", "/api/v1/games", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
-	r.ServeHTTP(rr, req)
+	router.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected status code 200, got %v", rr.Code)
 	}
@@ -930,7 +926,7 @@ func TestResultsCRUD(t *testing.T) {
 	req, _ = http.NewRequest("POST", "/api/v1/teams", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	rr = httptest.NewRecorder()
-	r.ServeHTTP(rr, req)
+	router.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -959,7 +955,7 @@ func TestResultsCRUD(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/api/v1/games/"+gameID+"/results", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -980,7 +976,7 @@ func TestResultsCRUD(t *testing.T) {
 	t.Run("Get Result by ID", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/v1/games/"+gameID+"/results/"+resultID, nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -1006,7 +1002,7 @@ func TestResultsCRUD(t *testing.T) {
 		req, _ := http.NewRequest("PUT", "/api/v1/games/"+gameID+"/results/"+resultID, bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
@@ -1027,7 +1023,7 @@ func TestResultsCRUD(t *testing.T) {
 		t.Skip()
 		req, _ := http.NewRequest("GET", "/api/v1/games/"+gameID+"/scoreboard", nil)
 		rr := httptest.NewRecorder()
-		r.ServeHTTP(rr, req)
+		router.ServeHTTP(rr, req)
 
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected status code 200, got %v", rr.Code)
