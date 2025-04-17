@@ -150,7 +150,8 @@ func contains(s []string, e string) bool {
 
 func InitDatabase(cfg *config.Config) (*sql.DB, error) {
 	slog.Info("Initing database...")
-	db, err := sql.Open(cfg.DB.Driver, cfg.DB.DataSource)
+	cfgDB := cfg.DB
+	db, err := sql.Open(cfgDB.Driver, cfgDB.DataSource)
 	if err != nil {
 		slog.Error("Error connecting to the database: " + err.Error())
 		defer db.Close()

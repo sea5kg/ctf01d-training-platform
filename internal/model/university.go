@@ -2,6 +2,7 @@ package model
 
 import (
 	"ctf01d/internal/httpserver"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -18,7 +19,7 @@ func (u *University) ToResponse() *httpserver.UniversityResponse {
 }
 
 func NewUniversitiesFromModels(us []*University) []*httpserver.UniversityResponse {
-	var universities []*httpserver.UniversityResponse = []*httpserver.UniversityResponse{}
+	var universities = []*httpserver.UniversityResponse{}
 	for _, u := range us {
 		universities = append(universities, u.ToResponse())
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"log/slog"
+	"net"
 	"os"
 
 	"ctf01d/internal/config"
@@ -13,6 +14,7 @@ import (
 	migration "ctf01d/internal/migrations/psql"
 	"ctf01d/internal/repository"
 	"ctf01d/pkg/ginmiddleware"
+
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/gin-contrib/cors"
@@ -32,9 +34,9 @@ func main() {
 		slog.Error("Config error: " + err.Error())
 		os.Exit(1)
 	}
-
+	cfgLog := cfg.Log
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.Level(cfg.ParseLogLevel(cfg.Log.Level)),
+		Level: slog.Level(cfg.ParseLogLevel(cfgLog.Level)),
 	}))
 	slog.SetDefault(logger)
 	slog.Info("Config path is - " + path)
@@ -87,7 +89,7 @@ func main() {
 	router.NoRoute(httpserver.NewHtmlRouter())
 
 	// Запуск сервера
-	addr := cfg.HTTP.Host + ":" + cfg.HTTP.Port
+	addr := net.JoinHostPort(cfg.Host, cfg.Port)
 	slog.Info("Server running on", slog.String("address", addr))
 	if err := router.Run(addr); err != nil {
 		slog.Error("Server error: " + err.Error())
