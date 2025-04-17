@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"ctf01d/internal/model"
+
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -29,9 +30,7 @@ func NewGameRepository(db *sql.DB) GameRepository {
 }
 
 func (r *gameRepo) Create(ctx context.Context, game *model.Game) error {
-	query := `INSERT INTO games (start_time, end_time, description)
-	          VALUES ($1, $2, $3)
-	          RETURNING id, start_time, end_time, description`
+	query := ``
 	row := r.db.QueryRowContext(ctx, query, game.StartTime, game.EndTime, game.Description)
 	err := row.Scan(&game.Id, &game.StartTime, &game.EndTime, &game.Description)
 	if err != nil {

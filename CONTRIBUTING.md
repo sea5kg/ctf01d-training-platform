@@ -1,6 +1,7 @@
 ## remake ssl/tls certificate
 
 ```sh
+cd build
 docker run --rm --name temp_certbot \
     -v ./nginx/certbot/conf:/etc/letsencrypt \
     -v ./nginx/certbot/www:/tmp/letsencrypt \
