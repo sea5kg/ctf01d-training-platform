@@ -1,31 +1,88 @@
-# Backend for ctf01d-training-platform
+# ctf01d-training-platform Backend
 
-This service uses Go and PostgreSQL.
+Go + PostgreSQL backend for CTF01D training platform.
 
-[Roadmap](docs/ROADMAP.md) & [Concept](docs/CONCEPT.md)
+[Roadmap](docs/ROADMAP.md) | [Concept](docs/CONCEPT.md) | [Experemental Frontend](https://github.com/AlexBazh/ctf01d-front/)
 
-### Related Projects
-- [Frontend for ctf01d-training-platform](https://github.com/AlexBazh/ctf01d-front/)
+---
 
-### Contributing
-We welcome contributions! Please see our [Contributing Guidelines](docs/CONTRIBUTING.md) for more details.
+## Features
 
-## Project structure
+- REST API (OpenAPI 3)
+- User/team management
+- Game and scoreboard logic
+- PostgreSQL migrations
+
+---
+
+## Quick Start
+
+```sh
+# 1. Запуск БД (PostgreSQL)
+docker run -d --name ctf01d-postgres -e POSTGRES_DB=ctf01d -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres
+
+# 2. Установка зависимостей
+go mod download && go mod tidy
+
+# 3. Сборка и запуск
+go build -o main cmd/main.go
+./main
+```
+
+Сервер будет доступен на [http://localhost:4102](http://localhost:4102)
+
+Default admin credentials: **admin/admin**
+
+---
+
+## Development
+
+### Requirements
+
+- Go 1.24+
+- Docker (для локальной БД)
+
+### Генерация кода из OpenAPI
+
+```sh
+oapi-codegen -generate models,gin -o internal/server/httpserver.gen.go --package routers api/openapi.yaml
+```
+
+### Создание миграции
+
+```sh
+go run scripts/create-migration.go
+```
+
+---
+
+## Database
+
+- Конфиг: `configs/config.*.yml`
+- Подключение:
+  ```
+  db:
+    driver: postgres
+    data_source: postgres://postgres@localhost:5432/ctf01d
+  ```
+- Подключение к контейнеру:
+  ```sh
+  docker exec -it ctf01d-postgres psql -U postgres
+  ```
+
+---
+
+## Project Structure
 
 ```sh
 .
 ├── api # openapi schema
 │   └── openapi.yaml
 ├── build # docker files
-│   ├── docker-compose.stage.yml
-│   ├── docker-compose.yml
-│   └── Dockerfile
 ├── cmd # main app
 │   └── main.go
 ├── configs # app config and other config (linter)
-│   ├── config.development.yml
-│   ├── config.production.yml
-│   ├── config.test.yml
+│   ├── config.*.yml
 │   ├── golangci
 │   │   └── golangci.yml
 │   └── spectral
@@ -64,115 +121,9 @@ We welcome contributions! Please see our [Contributing Guidelines](docs/CONTRIBU
     └── server_integration_test.go
 ```
 
-## Development
+---
 
-### Install go on `Ubuntu 24.04 LTS`
+## Contributing
 
-```shell
-$ snap install go --classic
-```
+See [Contributing Guidelines](docs/CONTRIBUTING.md).
 
-also you will need docker
-
-### Build and start from source code
-
-```shell
-$ make run-db
-...
-$ make build
-$ ./main
-```
-
-And then open
-http://localhost:4102/
-
-Default admin credentials: admin/admin
-
-
-### Install requirements
-
-```shell
-$ go mod download && go mod tidy
-```
-
-### Build server
-
-```shell
-$ go build cmd/main.go
-```
-
-### Run server
-
-```shell
-$ go run cmd/main.go
-```
-
-will be available on - [http://localhost:4102](http://localhost:4102)
-
-
-### Generate code from openapi schema
-
-```shell
-oapi-codegen -generate models,chi -o internal/server/httpserver.gen.go --package routers api/openapi.yaml
-```
-
-## DataBase
-
-### psql
-
-connect to db configure in `src/configs/config.#{STAGE}.yaml`
-
-```yaml
-...
-db:
-  driver: postgres
-  data_source: postgres://postgres@localhost:5432/ctf01d
-...
-```
-
-### run db local container
-
-```shell
-$ docker run -d --name ctf01d-postgres -e POSTGRES_DB=ctf01d -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres
-```
-
-### attach to db container
-
-```shell
-$ docker exec -it ctf01d-postgres psql -U postgres
-```
-
-### create new migrate file
-
-```shell
-go run scripts/create-migration.go # Created new migration file: internal/migrations/psql/update0022_update0023.go
-```
-
-## Experimental
-
-### fuzz api
-
-```shell
-docker run --net=host --volume /home/user/ctf01d-training-platform/api:/api/ ghcr.io/matusf/openapi-fuzzer run -s '/api/openapi.yaml' --url http://localhost:4102
-
-docker run --net=host --volume /home/user/ctf01d-training-platform/api:/api/ kisspeter/apifuzzer --src_file '/api/openapi.yaml' --url http://localhost:4102 -r /api/
-```
-
-
-## Generate Go server boilerplate from OpenAPI 3 - oapi-codegen
-
-install:
-
-```shell
-$ go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
-$ export PATH="$PATH:$HOME/bin:$HOME/go/bin"
-```
-
-
-## Database local
-
-```shell
-$ make run-db
-$ psql postgresql://postgres:postgres@localhost:4112/ctf01d_training_platform
-ctf01d_training_platform=#
-```
