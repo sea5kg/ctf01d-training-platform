@@ -1,35 +1,36 @@
-# Как собрать два архива для журейной системы и для vuln образа
+# Как собрать архивы для журейной системы и vuln-образа
 
-## Исходные данные: Архивы / репозитории с уязвимыми сервисами
+## Структура исходного сервиса
 
-Структура:
+В репозитории сервиса должны быть следующие директории и файлы:
 
-- Директория `service` - надо будет закинуть в vuln образ (Внутри есть README.md - можно взять как дескрипшн сервиса или типа того)
-- Директория `checker` - Надо будет переименовать в `checker_example_service1_py` и как есть скопировать в образ журейки в `data_game`
-- Директория `writeup` - от автора чтобы было что разбирать
-- Директория `exploits` - тоже от автора что бы можно было тестировать уязвимости
-- Файл `.ctf01d-service.yml` - конфигурационный файл для `ctf01d-training-platform` там есть id сервиса + часть конфига для журейной системы (с версионированием)
-- Файл `LICENSE` - лицензия (вроде как не обязательно но пусть будет)
-- Файл `README.md` - Описание общее для разработчиков сервиса (можно игнорировать)
+- `service/` — содержимое для vuln-образа (внутри есть `README.md` — можно использовать как описание сервиса)
+- `checker/` — скрипты для проверки (будут скопированы в образ жюри)
+- `writeup/` — writeup от автора
+- `exploits/` — примеры эксплойтов от автора
+- `.ctf01d-service.yml` — конфиг для платформы (id сервиса, параметры для жюри)
+- `LICENSE` — лицензия (желательно)
+- `README.md` — общее описание для разработчиков (опционально)
 
-Репозитории с примерами:
+**Примеры репозиториев:**
+- https://github.com/sea-kg/ctf01d-service-example1-py
+- https://github.com/sea-kg/ctf01d-service-example2-php
 
-1. https://github.com/sea-kg/ctf01d-service-example1-py
-2. https://github.com/sea-kg/ctf01d-service-example2-php
+---
 
+## Сборка vuln-образа
 
-vuln-image:
-- Директорию `service` копируем с переименовыванием в `%id-of-service%`, где id-of-service это id из файла `.ctf01d-service.yml` в секции `checker-config-*`/`id`
+- Директорию `service` копировать с переименованием в `%id-of-service%`, где id берётся из `.ctf01d-service.yml` (секция `checker-config-*`/`id`).
 
-jury-image:
-- Директорию `checker` копируем с переименовыванием в `data_game/checker_%id-of-service%`, где id-of-service это id из файла `.ctf01d-service.yml` в секции `checker-config-*`/`id`
+## Сборка жюрейного образа
 
+- Директорию `checker` копировать с переименованием в `data_game/checker_%id-of-service%` (id из `.ctf01d-service.yml`).
 
-## Образ с журейной системой
+---
 
+## Пример docker-compose для жюрейной системы
 
-`docker-compose.yml` (в нем может поменяться только версия `v0.5.2` нуу и может container name):
-```
+```yaml
 version: '3'
 
 services:
@@ -51,24 +52,29 @@ networks:
     driver: bridge
 ```
 
-`Dockerfile` - надо будет из файла `.ctf01d-service.yml` из секций `install-checker-requirements-v0.5.2` добавить команды.
-```
+---
+
+## Пример Dockerfile для жюрейного образа
+
+- В секции `install-checker-requirements-*` из `.ctf01d-service.yml` добавляйте нужные команды.
+
+```dockerfile
 FROM sea5kg/ctf01d:v0.5.2
 
-# checker_ctf01d-service-example1-py
-
-# nothing
-
+# Пример для python checker
 # checker_ctf01d-service-example2-php
 # copied from https://github.com/sea-kg/ctf01d-service-example2-php/blob/main/.ctf01d-service.yml
 
-RUN apt-get -y update
-RUN apt install -y python3 python3-pip python3-pip python3-requests
+RUN apt-get -y update && \
+    apt install -y python3 python3-pip python3-requests
 ```
 
-`data_game/config.yml`
-```
-## Combined config for ctf01d
+---
+
+## Пример конфига для жюрейной системы (`data_game/config.yml`)
+
+```yaml
+# Пример конфига для ctf01d
 # use 2 spaces for tab
 
 game:
@@ -114,10 +120,13 @@ teams:
     ip_address: "127.0.2.1" # address to vulnserver
 ```
 
+---
 
-Еще надо скопировать файлы из директории `checker` (для каждого сервиса) в `data_game/checker_%id-of-service%`, где id-of-service это id из файла `.ctf01d-service.yml` в секции `checker-config-*`/`id`
+## Копирование checker-скриптов
 
-то есть:
+Для каждого сервиса:
+- Скопируйте содержимое директории `checker` из репозитория сервиса в `data_game/checker_%id-of-service%` (id из `.ctf01d-service.yml`).
 
-- в директорию `data_game/checker_example_service1_py` скопировать файлы из https://github.com/sea-kg/ctf01d-service-example1-py/tree/main/checker
-- в директорию `data_game/checker_example_service2_php` скопировать файлы из https://github.com/sea-kg/ctf01d-service-example2-php/tree/main/checker
+**Пример:**
+- `data_game/checker_example_service1_py` ← содержимое https://github.com/sea-kg/ctf01d-service-example1-py/tree/main/checker
+- `data_game/checker_example_service2_php` ← содержимое https://github.com/sea-kg/ctf01d-service-example2-php/tree/main/checker
