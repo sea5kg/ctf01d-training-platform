@@ -6,8 +6,9 @@ import (
 
 	"ctf01d/internal/helper"
 	"ctf01d/internal/httpserver"
+	"ctf01d/internal/model"
 	"ctf01d/internal/repository"
-	"ctf01d/internal/view"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -83,5 +84,5 @@ func (h *Handler) ValidateSession(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, view.NewSessionFromModel(user))
+	c.JSON(http.StatusOK, model.NewSessionFromModel(user))
 }
