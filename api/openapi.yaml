@@ -1021,7 +1021,7 @@ paths:
               schema:
                 type: string
                 format: binary
-  /api/version:
+  /api/v1/version:
     get:
       summary: Getting service version
       description: This endpoint returns the current version of the service.

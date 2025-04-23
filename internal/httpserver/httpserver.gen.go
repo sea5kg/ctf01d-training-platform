@@ -484,7 +484,7 @@ type ServerInterface interface {
 	// (GET /api/v1/users/{userId}/profile)
 	GetProfileById(c *gin.Context, userId openapi_types.UUID)
 	// Getting service version
-	// (GET /api/version)
+	// (GET /api/v1/version)
 	GetVersion(c *gin.Context)
 }
 
@@ -1430,5 +1430,5 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.GET(options.BaseURL+"/api/v1/users/:userId", wrapper.GetUserById)
 	router.PUT(options.BaseURL+"/api/v1/users/:userId", wrapper.UpdateUser)
 	router.GET(options.BaseURL+"/api/v1/users/:userId/profile", wrapper.GetProfileById)
-	router.GET(options.BaseURL+"/api/version", wrapper.GetVersion)
+	router.GET(options.BaseURL+"/api/v1/version", wrapper.GetVersion)
 }
