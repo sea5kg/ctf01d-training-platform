@@ -7,6 +7,7 @@ import (
 	"ctf01d/internal/httpserver"
 	"ctf01d/internal/model"
 	"ctf01d/internal/repository"
+
 	"github.com/gin-gonic/gin"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -36,7 +37,7 @@ func (h *Handler) CreateResult(c *gin.Context, gameId openapi_types.UUID) {
 
 func (h *Handler) GetResult(c *gin.Context, gameId openapi_types.UUID, resultId openapi_types.UUID) {
 	repo := repository.NewResultRepository(h.DB)
-	result, err := repo.GetById(c.Request.Context(), gameId)
+	result, err := repo.GetById(c.Request.Context(), resultId)
 	if err != nil {
 		slog.Warn(err.Error(), "handler", "GetResult")
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to fetch result"})

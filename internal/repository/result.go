@@ -3,8 +3,10 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"ctf01d/internal/model"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -12,7 +14,7 @@ type ResultRepository interface {
 	Create(ctx context.Context, result *model.Result) error
 	GetById(ctx context.Context, id openapi_types.UUID) (*model.Result, error)
 	Update(ctx context.Context, result *model.Result) error
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, id openapi_types.UUID) error
 	List(ctx context.Context, gameId openapi_types.UUID) ([]*model.Result, error)
 }
 
@@ -36,10 +38,12 @@ func (r *resultRepo) Create(ctx context.Context, result *model.Result) error {
 	return nil
 }
 
-func (r *resultRepo) GetById(ctx context.Context, gameId openapi_types.UUID) (*model.Result, error) {
-	query := `SELECT id, team_id, game_id, score FROM results WHERE game_id = $1 order by score desc`
+func (r *resultRepo) GetById(ctx context.Context, id openapi_types.UUID) (*model.Result, error) {
+	query := `
+		SELECT id, team_id, game_id, score FROM results WHERE id = $1
+	`
 	result := &model.Result{}
-	err := r.db.QueryRowContext(ctx, query, gameId).Scan(&result.Id, &result.TeamId, &result.GameId, &result.Score)
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&result.Id, &result.TeamId, &result.GameId, &result.Score)
 	if err != nil {
 		return nil, err
 	}
@@ -47,19 +51,25 @@ func (r *resultRepo) GetById(ctx context.Context, gameId openapi_types.UUID) (*m
 }
 
 func (r *resultRepo) Update(ctx context.Context, result *model.Result) error {
-	query := `UPDATE results SET team_id = $1, game_id = $2, score = $3 WHERE id = $4`
+	query := `
+		UPDATE results SET team_id = $1, game_id = $2, score = $3 WHERE id = $4
+	`
 	_, err := r.db.ExecContext(ctx, query, result.TeamId, result.GameId, result.Score, result.Id)
 	return err
 }
 
-func (r *resultRepo) Delete(ctx context.Context, id string) error {
-	query := `DELETE FROM results WHERE id = $1`
+func (r *resultRepo) Delete(ctx context.Context, id openapi_types.UUID) error {
+	query := `
+		DELETE FROM results WHERE id = $1
+	`
 	_, err := r.db.ExecContext(ctx, query, id)
 	return err
 }
 
 func (r *resultRepo) List(ctx context.Context, gameId openapi_types.UUID) ([]*model.Result, error) {
-	query := `SELECT id, team_id, game_id, score FROM results WHERE game_id = $1 ORDER BY score DESC`
+	query := `
+		SELECT id, team_id, game_id, score FROM results WHERE game_id = $1 ORDER BY score DESC
+	`
 	rows, err := r.db.QueryContext(ctx, query, gameId)
 	if err != nil {
 		return nil, err
@@ -70,7 +80,7 @@ func (r *resultRepo) List(ctx context.Context, gameId openapi_types.UUID) ([]*mo
 	for rows.Next() {
 		var result model.Result
 		if err := rows.Scan(&result.Id, &result.TeamId, &result.GameId, &result.Score); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("List scan failed: %w", err)
 		}
 		results = append(results, &result)
 	}
