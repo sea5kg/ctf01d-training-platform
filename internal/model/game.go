@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"ctf01d/internal/httpserver"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -34,7 +35,7 @@ func (m *GameDetails) ToResponseGameDetails() *httpserver.GameResponse {
 		teams = append(teams, httpserver.TeamResponse{
 			Id:          t.Id,
 			Name:        t.Name,
-			Description: &t.Description,
+			Description: &t.Description.String,
 		})
 	}
 

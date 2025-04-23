@@ -8,6 +8,7 @@ import (
 	"ctf01d/internal/httpserver"
 	"ctf01d/internal/model"
 	"ctf01d/internal/repository"
+
 	"github.com/gin-gonic/gin"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -23,12 +24,9 @@ func (h *Handler) CreateTeam(c *gin.Context) {
 	newTeam := &model.Team{
 		Name:         req.Name,
 		SocialLinks:  helper.ToNullString(req.SocialLinks),
-		Description:  "",
+		Description:  helper.ToNullString(req.Description),
 		UniversityId: req.UniversityId,
 		AvatarUrl:    helper.ToNullString(req.AvatarUrl),
-	}
-	if req.Description != nil {
-		newTeam.Description = *req.Description
 	}
 
 	teamRepo := repository.NewTeamRepository(h.DB)
@@ -83,12 +81,9 @@ func (h *Handler) UpdateTeam(c *gin.Context, id openapi_types.UUID) {
 		Id:           id,
 		Name:         req.Name,
 		SocialLinks:  helper.ToNullString(req.SocialLinks),
-		Description:  "",
+		Description:  helper.ToNullString(req.Description),
 		UniversityId: req.UniversityId,
 		AvatarUrl:    helper.ToNullString(req.AvatarUrl),
-	}
-	if req.Description != nil {
-		updateTeam.Description = *req.Description
 	}
 
 	teamRepo := repository.NewTeamRepository(h.DB)

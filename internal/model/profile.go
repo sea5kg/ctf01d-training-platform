@@ -4,15 +4,16 @@ import (
 	"time"
 
 	"ctf01d/internal/httpserver"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 type Profile struct {
-	Id          openapi_types.UUID `db:"id"         json:"id"`
-	CurrentTeam string             `db:"name"       json:"name"`
-	CreatedAt   time.Time          `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time          `db:"updated_at" json:"updated_at"`
-	Role        string             `db:"role"       json:"role"`
+	Id              openapi_types.UUID `db:"id"         json:"id"`
+	CurrentTeamName string             `db:"name"       json:"name"`
+	CreatedAt       time.Time          `db:"created_at" json:"created_at"`
+	UpdatedAt       time.Time          `db:"updated_at" json:"updated_at"`
+	Role            string             `db:"role"       json:"role"`
 }
 
 type ProfileTeams struct {
@@ -32,7 +33,7 @@ func (p *ProfileWithHistory) ToResponse() *httpserver.ProfileResponse {
 		Id:          p.Profile.Id,
 		CreatedAt:   p.Profile.CreatedAt,
 		UpdatedAt:   &p.Profile.UpdatedAt,
-		TeamName:    p.Profile.CurrentTeam,
+		TeamName:    p.Profile.CurrentTeamName,
 		TeamRole:    httpserver.ProfileResponseTeamRole(p.Profile.Role),
 		TeamHistory: makeTeamHistory(p.History),
 	}

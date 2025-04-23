@@ -8,6 +8,7 @@ import (
 	"ctf01d/internal/httpserver"
 	"ctf01d/internal/model"
 	"ctf01d/internal/repository"
+
 	"github.com/gin-gonic/gin"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -91,7 +92,7 @@ func (h *Handler) ListUsers(c *gin.Context) {
 	users, err := repo.List(c)
 	if err != nil {
 		slog.Warn(err.Error(), "handler", "ListUsersHandler")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list users"})
 		return
 	}
 	c.JSON(http.StatusOK, model.NewUsersFromModels(users))
@@ -105,11 +106,16 @@ func (h *Handler) UpdateUser(c *gin.Context, id openapi_types.UUID) {
 		return
 	}
 
-	passwordHash, err := helper.HashPassword(user.Password)
-	if err != nil {
-		slog.Warn(err.Error(), "handler", "UpdateUserHandler")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid password"})
-		return
+	var passwordHash string
+	var err error
+	if user.Password != "" {
+		passwordHash, err = helper.HashPassword(user.Password)
+		if err != nil {
+			slog.Warn(err.Error(), "handler", "UpdateUserHandler")
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process password"})
+			return
+		}
 	}
 
 	repo := repository.NewUserRepository(h.DB)
@@ -125,7 +131,7 @@ func (h *Handler) UpdateUser(c *gin.Context, id openapi_types.UUID) {
 
 	if err := repo.Update(c, updateUser); err != nil {
 		slog.Warn(err.Error(), "handler", "UpdateUserHandler")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update user"})
 		return
 	}
 
