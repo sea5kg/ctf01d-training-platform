@@ -21,7 +21,7 @@ func NewUniversityRepository(db *sql.DB) UniversityRepository {
 }
 
 func (repo *universityRepo) Search(ctx context.Context, query string) ([]*model.University, error) {
-	rows, err := repo.db.QueryContext(ctx, "SELECT id, name FROM universities WHERE name ILIKE '%' || $1 || '%' LIMIT 10", query)
+	rows, err := repo.db.QueryContext(ctx, `SELECT id, name FROM universities WHERE name ILIKE '%' || $1 || '%' LIMIT 10`, query)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (repo *universityRepo) Search(ctx context.Context, query string) ([]*model.
 }
 
 func (repo *universityRepo) List(ctx context.Context) ([]*model.University, error) {
-	rows, err := repo.db.QueryContext(ctx, "SELECT id, name FROM universities LIMIT 10")
+	rows, err := repo.db.QueryContext(ctx, `SELECT id, name FROM universities LIMIT 10`)
 	if err != nil {
 		return nil, err
 	}

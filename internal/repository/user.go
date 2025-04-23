@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"ctf01d/internal/model"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -57,12 +58,12 @@ func (r *userRepo) GetProfileWithHistory(ctx context.Context, id openapi_types.U
 		WHERE profiles.user_id = $1
 	`
 	profile := model.Profile{}
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&profile.Id, &profile.CurrentTeam, &profile.Role, &profile.CreatedAt, &profile.UpdatedAt)
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&profile.Id, &profile.CurrentTeamName, &profile.Role, &profile.CreatedAt, &profile.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 	query = `
-	SELECT joined_at, left_at, name, role
+		SELECT joined_at, left_at, name, role
 		FROM team_history
 		JOIN teams ON teams.id = team_history.team_id
 		WHERE user_id = $1
@@ -87,7 +88,9 @@ func (r *userRepo) GetProfileWithHistory(ctx context.Context, id openapi_types.U
 }
 
 func (r *userRepo) GetById(ctx context.Context, id openapi_types.UUID) (*model.User, error) {
-	query := `SELECT id, display_name, user_name, avatar_url, role, status FROM users WHERE id = $1`
+	query := `
+		SELECT id, display_name, user_name, avatar_url, role, status FROM users WHERE id = $1
+	`
 	user := &model.User{}
 	err := r.db.QueryRowContext(ctx, query, id).Scan(&user.Id, &user.DisplayName, &user.Username, &user.AvatarUrl, &user.Role, &user.Status)
 	if err != nil {
@@ -97,7 +100,9 @@ func (r *userRepo) GetById(ctx context.Context, id openapi_types.UUID) (*model.U
 }
 
 func (r *userRepo) GetByUserName(ctx context.Context, name string) (*model.User, error) {
-	query := `SELECT id, password_hash FROM users WHERE user_name = $1`
+	query := `
+		SELECT id, password_hash FROM users WHERE user_name = $1
+	`
 	user := &model.User{}
 	err := r.db.QueryRowContext(ctx, query, name).Scan(&user.Id, &user.PasswordHash)
 	if err != nil {
@@ -107,7 +112,9 @@ func (r *userRepo) GetByUserName(ctx context.Context, name string) (*model.User,
 }
 
 func (r *userRepo) Update(ctx context.Context, user *model.User) error {
-	query := `UPDATE users SET user_name = $1, avatar_url = $2, role = $3, status = $4, password_hash = $5, display_name = $6 WHERE id = $7`
+	query := `
+		UPDATE users SET user_name = $1, avatar_url = $2, role = $3, status = $4, password_hash = $5, display_name = $6 WHERE id = $7
+	`
 	_, err := r.db.ExecContext(ctx, query, user.Username, user.AvatarUrl, user.Role, user.Status, user.PasswordHash, user.DisplayName, user.Id)
 	return err
 }
@@ -117,14 +124,14 @@ func (r *userRepo) Delete(ctx context.Context, id openapi_types.UUID) error {
 	if err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, "DELETE FROM profiles WHERE user_id = $1", id); err != nil {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM profiles WHERE user_id = $1`, id); err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
 			return err2
 		}
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, "DELETE FROM users WHERE id = $1", id); err != nil {
+	if _, err := tx.ExecContext(ctx, `DELETE FROM users WHERE id = $1`, id); err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
 			return err2
@@ -135,7 +142,9 @@ func (r *userRepo) Delete(ctx context.Context, id openapi_types.UUID) error {
 }
 
 func (r *userRepo) List(ctx context.Context) ([]*model.User, error) {
-	query := `SELECT id, display_name, user_name, avatar_url, role, status FROM users`
+	query := `
+		SELECT id, display_name, user_name, avatar_url, role, status FROM users
+	`
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err

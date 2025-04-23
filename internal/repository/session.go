@@ -24,7 +24,7 @@ func NewSessionRepository(db *sql.DB) SessionRepository {
 
 func (r *sessionRepo) GetSessionFromDB(ctx context.Context, sessionId string) (openapi_types.UUID, error) {
 	var userId openapi_types.UUID
-	err := r.db.QueryRowContext(ctx, "SELECT user_id FROM sessions WHERE id = $1 AND expires_at > NOW()", sessionId).Scan(&userId)
+	err := r.db.QueryRowContext(ctx, `SELECT user_id FROM sessions WHERE id = $1 AND expires_at > NOW()`, sessionId).Scan(&userId)
 	return userId, err
 }
 
@@ -43,7 +43,9 @@ func (r *sessionRepo) StoreSessionInDB(ctx context.Context, userId openapi_types
 }
 
 func (r *sessionRepo) DeleteSessionInDB(ctx context.Context, sessionId string) error {
-	query := "DELETE FROM sessions WHERE id = $1"
+	query := `
+		DELETE FROM sessions WHERE id = $1
+	`
 	_, err := r.db.ExecContext(ctx, query, sessionId)
 	return err
 }
