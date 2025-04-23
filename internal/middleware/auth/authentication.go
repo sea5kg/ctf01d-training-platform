@@ -5,15 +5,16 @@ import (
 
 	"ctf01d/internal/httpserver"
 	"ctf01d/internal/repository"
+
 	"github.com/gin-gonic/gin"
 )
 
 func AuthenticationMiddleware(repo repository.SessionRepository) httpserver.MiddlewareFunc {
 	return func(c *gin.Context) {
 		// Проверка, нужен ли вообще роуту токен для авторизации
-		_, sessionExists := c.Keys["sessionAuth.Scopes"]
+		_, sessionRequired := c.Keys["sessionAuth.Scopes"]
 
-		if !sessionExists {
+		if !sessionRequired {
 			c.Next()
 			return
 		}
@@ -26,7 +27,7 @@ func AuthenticationMiddleware(repo repository.SessionRepository) httpserver.Midd
 
 		userId, err := repo.GetSessionFromDB(c, sessionCookie)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid session"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authentication failed"})
 			return
 		}
 
