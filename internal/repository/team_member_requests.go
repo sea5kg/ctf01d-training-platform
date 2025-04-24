@@ -17,9 +17,9 @@ const (
 )
 
 type TeamMemberRequestRepository interface {
-	ConnectUserTeam(ctx context.Context, teamID, userID openapi_types.UUID, role string) error
-	ApproveUserTeam(ctx context.Context, teamID, userID openapi_types.UUID) error
-	RejectUserTeam(ctx context.Context, teamID, userID openapi_types.UUID) error
+	ConnectUserTeamRequest(ctx context.Context, teamID, userID openapi_types.UUID, role string) error
+	ApproveUserTeamRequest(ctx context.Context, teamID, userID openapi_types.UUID) error
+	RejectUserTeamRequest(ctx context.Context, teamID, userID openapi_types.UUID) error
 	LeaveUserFromTeam(ctx context.Context, teamID, userID openapi_types.UUID) error
 	TeamMembers(ctx context.Context, teamID openapi_types.UUID) ([]*model.User, error)
 }
@@ -28,14 +28,14 @@ func NewTeamMemberRequestRepository(db *sql.DB) TeamMemberRequestRepository {
 	return &teamRepo{db: db}
 }
 
-func (r *teamRepo) ConnectUserTeam(ctx context.Context, teamID, userID openapi_types.UUID, role string) error {
+func (r *teamRepo) ConnectUserTeamRequest(ctx context.Context, teamID, userID openapi_types.UUID, role string) error {
 	query := `INSERT INTO team_member_requests (team_id, user_id, role, status)
 	          VALUES ($1, $2, $3, 'pending')`
 	_, err := r.db.ExecContext(ctx, query, teamID, userID, role)
 	return err
 }
 
-func (r *teamRepo) ApproveUserTeam(ctx context.Context, teamID, userID openapi_types.UUID) error {
+func (r *teamRepo) ApproveUserTeamRequest(ctx context.Context, teamID, userID openapi_types.UUID) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -81,7 +81,7 @@ func (r *teamRepo) ApproveUserTeam(ctx context.Context, teamID, userID openapi_t
 	return tx.Commit()
 }
 
-func (r *teamRepo) RejectUserTeam(ctx context.Context, teamID, userID openapi_types.UUID) error {
+func (r *teamRepo) RejectUserTeamRequest(ctx context.Context, teamID, userID openapi_types.UUID) error {
 	query := `
 		UPDATE team_member_requests
 		SET status = $3

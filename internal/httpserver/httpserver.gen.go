@@ -453,15 +453,18 @@ type ServerInterface interface {
 	// Get all members of a team
 	// (GET /api/v1/teams/{teamId}/members)
 	TeamMembers(c *gin.Context, teamId openapi_types.UUID)
-	// Leave user from team
+	// Remove member from team
 	// (DELETE /api/v1/teams/{teamId}/members/{userId})
 	LeaveUserFromTeam(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID)
-	// Connect user with team
-	// (POST /api/v1/teams/{teamId}/members/{userId})
-	ConnectUserTeam(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID)
-	// Approve connected user with team lead
-	// (PUT /api/v1/teams/{teamId}/members/{userId})
-	ApproveUserTeam(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID)
+	// Reject user's request to join the team
+	// (DELETE /api/v1/teams/{teamId}/requests/{userId})
+	RejectUserTeamRequest(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID)
+	// Create request to join team
+	// (POST /api/v1/teams/{teamId}/requests/{userId})
+	ConnectUserTeamRequest(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID)
+	// Approve user's request to join the team
+	// (PUT /api/v1/teams/{teamId}/requests/{userId})
+	ApproveUserTeamRequest(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID)
 	// Retrieves a list of universities
 	// (GET /api/v1/universities)
 	ListUniversities(c *gin.Context, params ListUniversitiesParams)
@@ -1130,8 +1133,8 @@ func (siw *ServerInterfaceWrapper) LeaveUserFromTeam(c *gin.Context) {
 	siw.Handler.LeaveUserFromTeam(c, teamId, userId)
 }
 
-// ConnectUserTeam operation middleware
-func (siw *ServerInterfaceWrapper) ConnectUserTeam(c *gin.Context) {
+// RejectUserTeamRequest operation middleware
+func (siw *ServerInterfaceWrapper) RejectUserTeamRequest(c *gin.Context) {
 
 	var err error
 
@@ -1162,11 +1165,11 @@ func (siw *ServerInterfaceWrapper) ConnectUserTeam(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.ConnectUserTeam(c, teamId, userId)
+	siw.Handler.RejectUserTeamRequest(c, teamId, userId)
 }
 
-// ApproveUserTeam operation middleware
-func (siw *ServerInterfaceWrapper) ApproveUserTeam(c *gin.Context) {
+// ConnectUserTeamRequest operation middleware
+func (siw *ServerInterfaceWrapper) ConnectUserTeamRequest(c *gin.Context) {
 
 	var err error
 
@@ -1197,7 +1200,42 @@ func (siw *ServerInterfaceWrapper) ApproveUserTeam(c *gin.Context) {
 		}
 	}
 
-	siw.Handler.ApproveUserTeam(c, teamId, userId)
+	siw.Handler.ConnectUserTeamRequest(c, teamId, userId)
+}
+
+// ApproveUserTeamRequest operation middleware
+func (siw *ServerInterfaceWrapper) ApproveUserTeamRequest(c *gin.Context) {
+
+	var err error
+
+	// ------------- Path parameter "teamId" -------------
+	var teamId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "teamId", c.Param("teamId"), &teamId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter teamId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	// ------------- Path parameter "userId" -------------
+	var userId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", c.Param("userId"), &userId, runtime.BindStyledParameterOptions{Explode: false, Required: true})
+	if err != nil {
+		siw.ErrorHandler(c, fmt.Errorf("Invalid format for parameter userId: %w", err), http.StatusBadRequest)
+		return
+	}
+
+	c.Set(SessionAuthScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.ApproveUserTeamRequest(c, teamId, userId)
 }
 
 // ListUniversities operation middleware
@@ -1421,8 +1459,9 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.PUT(options.BaseURL+"/api/v1/teams/:teamId", wrapper.UpdateTeam)
 	router.GET(options.BaseURL+"/api/v1/teams/:teamId/members", wrapper.TeamMembers)
 	router.DELETE(options.BaseURL+"/api/v1/teams/:teamId/members/:userId", wrapper.LeaveUserFromTeam)
-	router.POST(options.BaseURL+"/api/v1/teams/:teamId/members/:userId", wrapper.ConnectUserTeam)
-	router.PUT(options.BaseURL+"/api/v1/teams/:teamId/members/:userId", wrapper.ApproveUserTeam)
+	router.DELETE(options.BaseURL+"/api/v1/teams/:teamId/requests/:userId", wrapper.RejectUserTeamRequest)
+	router.POST(options.BaseURL+"/api/v1/teams/:teamId/requests/:userId", wrapper.ConnectUserTeamRequest)
+	router.PUT(options.BaseURL+"/api/v1/teams/:teamId/requests/:userId", wrapper.ApproveUserTeamRequest)
 	router.GET(options.BaseURL+"/api/v1/universities", wrapper.ListUniversities)
 	router.GET(options.BaseURL+"/api/v1/users", wrapper.ListUsers)
 	router.POST(options.BaseURL+"/api/v1/users", wrapper.CreateUser)

@@ -95,7 +95,7 @@ func (h *Handler) UpdateTeam(c *gin.Context, id openapi_types.UUID) {
 	c.JSON(http.StatusOK, gin.H{"data": "Team updated successfully"})
 }
 
-func (h *Handler) ConnectUserTeam(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID) {
+func (h *Handler) ConnectUserTeamRequest(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID) {
 	var req struct {
 		Role string `json:"role"`
 	}
@@ -105,20 +105,32 @@ func (h *Handler) ConnectUserTeam(c *gin.Context, teamId openapi_types.UUID, use
 	}
 
 	teamRepo := repository.NewTeamMemberRequestRepository(h.DB)
-	if err := teamRepo.ConnectUserTeam(c.Request.Context(), teamId, userId, req.Role); err != nil {
+	if err := teamRepo.ConnectUserTeamRequest(c.Request.Context(), teamId, userId, req.Role); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": "User create request to join the team"})
 }
 
-func (h *Handler) ApproveUserTeam(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID) {
+func (h *Handler) ApproveUserTeamRequest(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID) {
 	teamRepo := repository.NewTeamMemberRequestRepository(h.DB)
-	if err := teamRepo.ApproveUserTeam(c.Request.Context(), teamId, userId); err != nil {
+	if err := teamRepo.ApproveUserTeamRequest(c.Request.Context(), teamId, userId); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"data": "User approved and added to team successfully"})
+}
+
+func (h *Handler) RejectUserTeamRequest(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID) {
+	teamRepo := repository.NewTeamMemberRequestRepository(h.DB)
+
+	if err := teamRepo.RejectUserTeamRequest(c.Request.Context(), teamId, userId); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// If the rejection was successful, respond with a 200 OK status and a success message
+	c.JSON(http.StatusOK, gin.H{"data": "User request rejected successfully"})
 }
 
 func (h *Handler) LeaveUserFromTeam(c *gin.Context, teamId openapi_types.UUID, userId openapi_types.UUID) {
