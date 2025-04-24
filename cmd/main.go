@@ -5,7 +5,11 @@ import (
 	"log"
 	"log/slog"
 	"net"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"ctf01d/internal/config"
 	"ctf01d/internal/handler"
@@ -42,7 +46,7 @@ func main() {
 	slog.Info("Config path is - " + path)
 
 	// Подключение к БД
-	db, err := migration.InitDatabase(cfg)
+	db, err := migration.SetupDatabase(cfg)
 	if err != nil {
 		slog.Error("Database connection error: " + err.Error())
 		os.Exit(1)
@@ -90,9 +94,33 @@ func main() {
 
 	// Запуск сервера
 	addr := net.JoinHostPort(cfg.Host, cfg.Port)
-	slog.Info("Server running on", slog.String("address", addr))
-	if err := router.Run(addr); err != nil {
-		slog.Error("Server error: " + err.Error())
+	slog.Info("Server starting on", slog.String("address", addr))
+
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: router,
+	}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("Server error", slog.String("error", err.Error()))
+			os.Exit(1)
+		}
+	}()
+
+	slog.Info("Server is running", slog.String("address", addr))
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	slog.Info("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		slog.Error("Server forced to shutdown", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+
+	slog.Info("Server exited gracefully")
 }

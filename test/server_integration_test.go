@@ -30,7 +30,7 @@ func TestMain(m *testing.M) {
 		panic(err)
 	}
 
-	db, err = migration.InitDatabase(cfg)
+	db, err = migration.SetupDatabase(cfg)
 	if err != nil {
 		panic(err)
 	}

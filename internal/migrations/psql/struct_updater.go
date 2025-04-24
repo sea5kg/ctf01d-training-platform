@@ -148,7 +148,7 @@ func contains(s []string, e string) bool {
 	return false
 }
 
-func InitDatabase(cfg *config.Config) (*sql.DB, error) {
+func SetupDatabase(cfg *config.Config) (*sql.DB, error) {
 	slog.Info("Initing database...")
 	cfgDB := cfg.DB
 	db, err := sql.Open(cfgDB.Driver, cfgDB.DataSource)
@@ -167,7 +167,7 @@ func InitDatabase(cfg *config.Config) (*sql.DB, error) {
 	// last_update := &models.DatabaseUpdate{}
 	installedUpdates, err := getInstalledDatabaseVersions(db)
 	if err != nil {
-		slog.Error("Problem with database (InitDatabase): " + err.Error())
+		slog.Error("Problem with database (SetupDatabase): " + err.Error())
 		defer db.Close()
 		return nil, err
 	}
